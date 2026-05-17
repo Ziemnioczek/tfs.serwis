@@ -1,0 +1,59 @@
+{
+  "name": "tfs.app",
+  "version": "1.1.5",
+  "description": "TechFixStudio System",
+  "main": "main.js",
+  "author": "TechFixStudio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ziemnioczek/tfs.serwis.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "publish": "electron-builder --win -p always"
+  },
+  "build": {
+    "appId": "com.techfix.studio",
+    "productName": "TechFixStudio",
+    "directories": {
+      "output": "dist"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Ziemnioczek",
+        "repo": "tfs.serwis"
+      }
+    ],
+    "files": [
+      "**/*",
+      "!dist/*"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "**/*.db",
+      "node_modules/better-sqlite3"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "tfs.serwis"
+    }
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^26.8.1",
+    "electron-rebuild": "^3.2.9"
+  }
+}

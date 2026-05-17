@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>tfs.serwis</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; height: 100vh; overflow: hidden; }
+        .main-wrapper { display: flex; height: 100vh; width: 100%; }
+        .content-left { flex: 1; position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .main-logo-container { position: absolute; top: 5px; left: 40px; z-index: 20; }
+        .main-logo-container img { width: 200px; height: 100px; object-fit: contain; }
+        .stats-bar { position: absolute; top: 20px; left: 310px; right: 20px; display: flex; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; height: 60px; align-items: stretch; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; position: relative; flex-grow: 1; cursor: pointer; transition: background-color 0.2s; }
+        .stat-box:hover { background-color: #e4e4e4; }
+        .stat-box.active { background-color: #e4e4e4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-box::after { content: ""; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background-color: #bbb; }
+        .stat-box:last-child::after { display: none; }
+        .stat-label { font-size: 16px !important; color: #444; margin-bottom: 2px; }
+        .stat-number { font-size: 30px !important; font-weight: bold; color: #000; }
+        #view-list { width: 100%; height: 100vh; padding: 110px 20px 30px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .top-module-nav { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-shrink: 0; }
+        .module-btn { width: 55px; height: 55px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); border: 1px solid #a9a9a9; border-radius: 6px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: all 0.2s; cursor: pointer; }
+        .module-btn img { width: 32px; height: 32px; object-fit: contain; }
+        .module-btn:hover:not(.active) { background: linear-gradient(to bottom, #f4f4f4, #d5d5d5); transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .module-btn.active { background: #d0d0d0; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); border-color: #888; cursor: default; }
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: auto; flex-grow: 1; max-height: 40vh; margin-bottom: 30px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; min-width: 2000px; }
+        thead th { background-color: #34495e; color: white; padding: 12px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid #455a64; position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none; transition: background-color 0.2s; padding-right: 20px; position: relative; }
+        thead th:hover { background-color: #2c3e50; }
+        thead th.sort-asc::after { content: '▼'; color: white; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; }
+        thead th.sort-desc::after { content: '▲'; color: white; position: absolute; right: 5px; top: 50%; transform: translateY(-50%); font-size: 10px; }
+        tbody tr { border-bottom: 1.5px solid #e0e0e0; transition: 0.1s; cursor: pointer; }
+        tbody tr:hover { background-color: #f9f9f9; }
+        tbody tr.selected { background-color: #d0e8f2 !important; }
+        td { padding: 10px; font-size: 13px; color: #2c3e50; border-right: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+        td:last-child { border-right: none; }
+        .id-badge { background: #f0f0f0; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: #333; display: inline-block; }
+        .control-panel { background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; padding: 25px 20px; display: flex; gap: 20px; box-shadow: inset 0 1px 3px rgba(255,255,255,0.5); margin-top: auto; flex-shrink: 0; }
+        .search-form { flex-grow: 1; display: flex; flex-direction: column; gap: 15px; justify-content: center; }
+        .search-row-top { display: flex; gap: 25px; align-items: center; justify-content: flex-start; }
+        .search-row-top div { display: flex; align-items: center; gap: 8px; flex: 1; max-width: 500px; }
+        .search-row-top label { font-size: 13px; color: #000; white-space: nowrap; font-weight: bold; }
+        .search-row-top input { width: 100%; padding: 6px 8px; border: 1px solid #a9a9a9; border-radius: 2px; font-size: 13px; box-sizing: border-box; }
+        .search-row-middle, .search-row-bottom { display: flex; gap: 15px; align-items: stretch; }
+        .spec-frame { border: 1px solid #bbb; border-radius: 2px; padding: 18px 10px 10px 10px; position: relative; background: #e9e9e9; flex: 1; min-width: 0; }
+        .spec-frame-title { position: absolute; top: -10px; left: 10px; background: #f0f0f0; padding: 0 5px; font-size: 12px; display: flex; align-items: center; gap: 5px; font-weight: bold; color: #000; z-index: 5; cursor: pointer; }
+        .spec-frame-title input { margin: 0; cursor: pointer; }
+        .spec-frame-content { transition: all 0.3s; }
+        .content-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; }
+        .spec-frame select, .spec-frame input[type="date"] { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 2px; font-size: 12px; background: white; box-sizing: border-box; }
+        .spec-frame-row { display: flex; align-items: center; gap: 5px; }
+        .spec-label-small { font-size: 11px; color: #444; }
+        .checkbox-column { display: flex; flex-direction: column; justify-content: center; gap: 4px; font-size: 12px; min-width: 100px; }
+        .checkbox-column label { display: flex; align-items: center; gap: 5px; cursor: pointer; }
+        .form-buttons { display: flex; flex-direction: column; gap: 25px; min-width: 150px; justify-content: center; }
+        .form-buttons button { padding: 10px 10px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); color: #000; transition: all 0.2s; font-weight: bold; }
+        .form-buttons button:hover { background: linear-gradient(to bottom, #f0f0f0, #d0d0d0); }
+        .form-buttons button:active { background: #d0d0d0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.2); }
+        .btn-icon { font-size: 16px; transition: all 0.2s; }
+        #btn_dodaj .btn-icon { color: #4CAF50; text-shadow: 0 0 1px rgba(76, 175, 80, 0.5); }
+        #btn_wybierz .btn-icon { color: #2196F3; }
+        #btn_usun .btn-icon { color: #F44336; text-shadow: 0 0 1px rgba(244, 67, 54, 0.5); }
+        .btn-disabled, button:disabled { cursor: not-allowed !important; color: #777 !important; }
+        .btn-disabled .btn-icon, button:disabled .btn-icon { filter: grayscale(100%) opacity(40%); }
+        .sidebar-right { width: 240px; background-color: #f0f0f0; border-left: 1px solid #ccc; padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100vh; box-sizing: border-box; }
+        .side-btn { background: #f8f8f8 !important; border: 1px solid #999; border-radius: 4px; cursor: pointer; display: flex; align-items: center; font-weight: bold; transition: all 0.2s ease; text-decoration: none; color: black; width: 100%; min-height: 80px; padding: 0 20px; font-size: 15px; justify-content: flex-start; }
+        .side-btn img { width: 40px; height: 40px; object-fit: contain; margin-right: 25px; }
+        .side-btn:hover { background: #ffffff !important; transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .sidebar-spacer { flex-grow: 1; }
+
+        .cell-truncate { display: block; max-width: 110px; margin: 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+        #custom-tooltip { position: fixed; display: none; background: #222; color: #fff; padding: 10px 15px; border-radius: 6px; font-size: 13px; z-index: 100000; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: none; line-height: 1.5; white-space: pre-wrap; border: 1px solid #555; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="content-left">
+        <div class="main-logo-container">
+            <img src="img/logo-tfs.serwis.png" alt="Logo Serwisu">
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-box" onclick="window.location.href='naprawy_w_trakcie.html'" title="Pokaż w trakcie">
+                <span class="stat-label">Naprawy w trakcie</span>
+                <span class="stat-number" id="stat_w_trakcie">0</span>
+            </div>
+            <div class="stat-box active" onclick="window.location.href='naprawy_wygasajace.html'" title="Pokaż wygasające">
+                <span class="stat-label">Naprawy wygasające</span>
+                <span class="stat-number" id="stat_wygasajace">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_po_terminie.html'" title="Pokaż po terminie">
+                <span class="stat-label">Naprawy po terminie</span>
+                <span class="stat-number" id="stat_po_terminie">0</span>
+            </div>
+        </div>
+
+        <div id="view-list">
+            
+            <div class="top-module-nav">
+                <a href="naprawy.html" class="module-btn active" title="Naprawy">
+                    <img src="img/ikonka-naprawy.png" alt="Naprawy">
+                </a>
+                <a href="sprzęt.html" class="module-btn" title="Sprzęt">
+                    <img src="img/ikonka-sprzęt.png" alt="Sprzęt">
+                </a>
+                <a href="klienci.html" class="module-btn" title="Klienci">
+                    <img src="img/ikonka-klienci.png" alt="Klienci">
+                </a>
+            </div>
+
+            <div class="table-container">
+                <table id="repairsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortujTabele('id', this)">ID</th>
+                            <th onclick="sortujTabele('data_dodania', this)">Data dodania</th>
+                            <th onclick="sortujTabele('ukonczenie', this)">Ukończenie</th>
+                            <th onclick="sortujTabele('rodzaj', this)">Rodzaj</th>
+                            <th onclick="sortujTabele('koszt_naprawy', this)">Koszt naprawy</th>
+                            <th onclick="sortujTabele('koszt_materialow', this)">Koszt materiałów</th>
+                            <th onclick="sortujTabele('opis_uszkodzenia', this)">Opis uszkodzenia</th>
+                            <th onclick="sortujTabele('opis_naprawy', this)">Opis naprawy</th>
+                            <th onclick="sortujTabele('komentarz', this)">Komentarz</th>
+                            <th onclick="sortujTabele('status', this)">Status</th>
+                            <th onclick="sortujTabele('klient', this)">Klient</th>
+                            <th onclick="sortujTabele('sprzet', this)">Sprzęt</th>
+                            <th onclick="sortujTabele('obslugujacy', this)">Obsługujący</th>
+                        </tr>
+                    </thead>
+                    <tbody id="repairsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="control-panel">
+                <div class="search-form">
+                    <div class="search-row-top">
+                        <div><label>Klient:</label> <input type="text" id="inp_nr_klienta" placeholder="Nazwisko, imię..."></div>
+                        <div><label>Sprzęt:</label> <input type="text" id="inp_nr_sprzetu" placeholder="Wpisz nazwę sprzętu..."></div>
+                    </div>
+
+                    <div class="search-row-middle">
+                        <div class="spec-frame">
+                            <label class="spec-frame-title"><input type="checkbox" id="chk_status_group"> Status naprawy:</label>
+                            <div id="content_status" class="spec-frame-content content-disabled">
+                                <select id="sel_status" disabled>
+                                    <option>⬜ [Otwarta] Nowa naprawa</option>
+                                    <option>🟩 [Otwarta] Naprawa rozpoczęta</option>
+                                    <option>🟨 [Oczekująca] Serwis zewnętrzny</option>
+                                    <option>🟩 [Oczekująca] Oczekuje na części</option>
+                                    <option>🟥 [Zamknięta] Naprawa niewykonana</option>
+                                    <option>🟦 [Zamknięta] Naprawa ukończona</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="checkbox-column">
+                            <label><input type="checkbox" id="chk_otwarte"> Otwarte</label>
+                            <label><input type="checkbox" id="chk_oczekujace"> Oczekujące</label>
+                            <label><input type="checkbox" id="chk_zamkniete"> Zamknięte</label>
+                        </div>
+                        <div class="spec-frame">
+                            <label class="spec-frame-title"><input type="checkbox" id="chk_serwisant_group"> Serwisant</label>
+                            <div id="content_serwisant" class="spec-frame-content content-disabled">
+                                <select id="sel_serwisant" disabled>
+                                    <option>Nieprzydzielony</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="search-row-bottom">
+                        <div class="spec-frame">
+                            <label class="spec-frame-title"><input type="checkbox" id="chk_data_przyjecia"> Data dodania:</label>
+                            <div id="content_przyjecia" class="spec-frame-content content-disabled">
+                                <div class="spec-frame-row">
+                                    <input type="date" id="inp_przyjecie" disabled>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="spec-frame">
+                            <label class="spec-frame-title"><input type="checkbox" id="chk_data_ukonczenia"> Data ukończenia:</label>
+                            <div id="content_ukonczenia" class="spec-frame-content content-disabled">
+                                <div class="spec-frame-row">
+                                    <input type="date" id="inp_ukonczenie" disabled>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="spec-frame">
+                            <label class="spec-frame-title"><input type="checkbox" id="chk_typ_naprawy"> Typ naprawy</label>
+                            <div id="content_typ_naprawy" class="spec-frame-content content-disabled">
+                                <select id="sel_typ_naprawy" disabled>
+                                    <option>Niegwarancyjna</option>
+                                    <option>Gwarancyjna</option>
+                                    <option>Pogwarancyjna</option>
+                                    <option>Umowa</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-buttons">
+                    <button id="btn_dodaj"><span class="btn-icon">✚</span> Dodaj</button>
+                    <button id="btn_wybierz" class="btn-disabled" disabled><span class="btn-icon">📄</span> Wybierz</button>
+                    <button id="btn_usun" class="btn-disabled" disabled><span class="btn-icon">✖</span> Usuń</button>
+                </div>
+            </div>
+        </div>
+    </div> 
+
+    <div class="sidebar-right">
+        <a href="index.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-home.png"> <span>Home</span></button></a>
+        <a href="sprzęt.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-sprzęt.png"> <span>Sprzęt</span></button></a>
+        <a href="klienci.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-klienci.png"> <span>Klienci</span></button></a>
+        <a href="naprawy.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-naprawy.png"> <span>Naprawy</span></button></a>
+        <div class="sidebar-spacer"></div>
+        <a href="rozliczenia.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-rozliczenia.png"> <span>Rozliczenia</span></button></a>
+        <button class="side-btn"><img src="img/ikonka-statystyki.png"> <span>Statystyki</span></button>
+        <button class="side-btn"><img src="img/ikonka-konfiguracja.png"> <span>Konfiguracja</span></button>
+        <button class="side-btn"><img src="img/ikonka-wyloguj.png"> <span>Wyloguj</span></button>
+    </div>
+</div>
+
+<div id="custom-tooltip"></div>
+
+<script>
+    const { ipcRenderer } = require('electron');
+    const tbody = document.getElementById('repairsBody');
+    let wybranaNaprawaId = null;
+    let wszystkieNaprawy = [];
+    let aktualnaKolumnaSortowania = '';
+    let sortowanieRosnaco = true;
+
+    const tooltip = document.getElementById('custom-tooltip');
+    document.addEventListener('mouseover', (e) => { const target = e.target.closest('.cell-truncate'); if (target && target.scrollWidth > target.clientWidth) { tooltip.textContent = target.textContent; tooltip.style.display = 'block'; } });
+    document.addEventListener('mousemove', (e) => { if (tooltip.style.display === 'block') { let left = e.clientX + 15; let top = e.clientY + 15; if (left + tooltip.offsetWidth > window.innerWidth) left = e.clientX - tooltip.offsetWidth - 15; if (top + tooltip.offsetHeight > window.innerHeight) top = e.clientY - tooltip.offsetHeight - 15; tooltip.style.left = left + 'px'; tooltip.style.top = top + 'px'; } });
+    document.addEventListener('mouseout', (e) => { if (e.target.closest('.cell-truncate')) tooltip.style.display = 'none'; });
+
+    function formatujDateTabela(dataStr) { if (!dataStr) return ''; if (dataStr.includes('T')) dataStr = dataStr.split('T')[0]; const p = dataStr.split('-'); if(p.length === 3) { if(p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`; return `${p[0]}-${p[1]}-${p[2]}`; } return dataStr; }
+    function parseDateForSort(dateStr) { if (!dateStr) return null; if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; const parts = dateStr.split('-'); if (parts.length === 3) { if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; if (parts[0].length === 4) return dateStr; } return dateStr; }
+    function setupToggle(checkboxId, targetIds, contentId) { const chk = document.getElementById(checkboxId); if(!chk) return; chk.addEventListener('change', (e) => { targetIds.forEach(id => { const el = document.getElementById(id); if(el) el.disabled = !e.target.checked; }); if (contentId) { const cw = document.getElementById(contentId); if(cw) { if(e.target.checked) cw.classList.remove('content-disabled'); else cw.classList.add('content-disabled'); } } filtrujNaprawy(); }); }
+
+    setupToggle('chk_status_group', ['sel_status'], 'content_status'); setupToggle('chk_serwisant_group', ['sel_serwisant'], 'content_serwisant'); setupToggle('chk_data_przyjecia', ['inp_przyjecie'], 'content_przyjecia'); setupToggle('chk_data_ukonczenia', ['inp_ukonczenie'], 'content_ukonczenia'); setupToggle('chk_typ_naprawy', ['sel_typ_naprawy'], 'content_typ_naprawy');
+
+    const btnDodaj = document.getElementById('btn_dodaj'); const btnWybierz = document.getElementById('btn_wybierz'); const btnUsun = document.getElementById('btn_usun');
+    function zresetujPrzyciski() { wybranaNaprawaId = null; btnWybierz.classList.add('btn-disabled'); btnWybierz.disabled = true; btnUsun.classList.add('btn-disabled'); btnUsun.disabled = true; }
+
+    function zaladujStatystyki(pobrane) {
+        let wTrakcie = 0, poTerminie = 0, wygasajace = 0;
+        const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+        const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+        pobrane.forEach(n => {
+            const status = (n.status || '').toLowerCase();
+            if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                let dataU = n.ukonczenie || n.data_ukonczenia;
+                let isPoTerminie = false;
+
+                if (dataU) {
+                    let normalnaData = parseDateForSort(dataU);
+                    let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                    if (termin < dzisiaj) { poTerminie++; isPoTerminie = true; }
+                    else if (termin >= dzisiaj && termin <= za4Dni) { wygasajace++; }
+                }
+
+                if (!isPoTerminie) { wTrakcie++; }
+            }
+        });
+
+        document.getElementById('stat_w_trakcie').textContent = wTrakcie;
+        document.getElementById('stat_wygasajace').textContent = wygasajace;
+        document.getElementById('stat_po_terminie').textContent = poTerminie;
+    }
+
+    async function odswiezTabele() {
+        try {
+            const pobraneNaprawy = await ipcRenderer.invoke('get-naprawy') || [];
+            zaladujStatystyki(pobraneNaprawy);
+            const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+            const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+            wszystkieNaprawy = pobraneNaprawy.filter(n => {
+                const status = (n.status || '').toLowerCase();
+                if (status.includes('[zamknięta]') || status.includes('ukończona') || status.includes('odebrany') || status.includes('niewykonana')) return false;
+                let d = n.ukonczenie || n.data_ukonczenia;
+                if(!d) return false;
+                let normalnaData = parseDateForSort(d);
+                let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                return termin >= dzisiaj && termin <= za4Dni;
+            });
+
+            const wszyscyKlienci = await ipcRenderer.invoke('get-klienci').catch(() => []); const calySprzet = await ipcRenderer.invoke('get-sprzet').catch(() => []);
+            wszystkieNaprawy.forEach(naprawa => { if (naprawa.id_klienta && (!naprawa.klient && !naprawa.klient_imie && !naprawa.klient_firma)) { const k = wszyscyKlienci.find(item => item.id == naprawa.id_klienta); if (k) naprawa.klient = [k.imie, k.nazwisko].filter(Boolean).join(' ') || k.firma || ''; } if (naprawa.id_sprzetu && (!naprawa.sprzet && !naprawa.sprzet_nazwa)) { const s = calySprzet.find(item => item.id == naprawa.id_sprzetu); if (s) naprawa.sprzet = s.nazwa || ''; } });
+            filtrujNaprawy();
+        } catch (error) { console.error(error); }
+    }
+
+    function sortujTabele(klucz, thElement) { if (aktualnaKolumnaSortowania === klucz) { sortowanieRosnaco = !sortowanieRosnaco; } else { aktualnaKolumnaSortowania = klucz; sortowanieRosnaco = true; } document.querySelectorAll('th').forEach(th => th.classList.remove('sort-asc', 'sort-desc')); thElement.classList.add(sortowanieRosnaco ? 'sort-asc' : 'sort-desc'); filtrujNaprawy(); }
+    
+    function renderujTabele(naprawyDoWyswietlenia) { 
+        tbody.innerHTML = ''; zresetujPrzyciski(); 
+        const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+        naprawyDoWyswietlenia.forEach(n => { 
+            let kolorDaty = '';
+            let dataU = n.ukonczenie || n.data_ukonczenia;
+            const status = (n.status || '').toLowerCase();
+            if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                if (dataU) { let termin = new Date(parseDateForSort(dataU)); termin.setHours(0, 0, 0, 0); if (termin < dzisiaj) kolorDaty = 'color: #d32f2f;'; }
+            }
+            const tr = document.createElement('tr'); tr.setAttribute('data-id', n.id); 
+            tr.innerHTML = `<td><span class="id-badge">#${n.id}</span></td><td><b>${formatujDateTabela(n.data_dodania || n.data_przyjecia)}</b></td><td><b style="${kolorDaty}">${formatujDateTabela(dataU)}</b></td><td><div class="cell-truncate"><b>${n.rodzaj || n.typ || ''}</b></div></td><td><b>${n.koszt_naprawy || n.koszt || ''}</b></td><td><b>${n.koszt_materialow || ''}</b></td><td><div class="cell-truncate"><b>${n.opis_uszkodzenia || ''}</b></div></td><td><div class="cell-truncate"><b>${n.opis_naprawy || ''}</b></div></td><td><div class="cell-truncate"><b>${n.komentarz || ''}</b></div></td><td><strong>${n.status || ''}</strong></td><td><div class="cell-truncate"><b>${n.klient || ''}</b></div></td><td><div class="cell-truncate"><b>${n.sprzet || ''}</b></div></td><td><div class="cell-truncate"><b>${n.obslugujacy || ''}</b></div></td>`; 
+            tbody.appendChild(tr); 
+        }); 
+    }
+    
+    function filtrujNaprawy() { 
+        const filters = { klient: document.getElementById('inp_nr_klienta').value.toLowerCase().trim(), sprzet: document.getElementById('inp_nr_sprzetu').value.toLowerCase().trim() }; 
+        const chk_status = document.getElementById('chk_status_group').checked; const sel_status = document.getElementById('sel_status').value.toLowerCase(); 
+        const chk_otwarte = document.getElementById('chk_otwarte').checked; const chk_oczekujace = document.getElementById('chk_oczekujace').checked; const chk_zamkniete = document.getElementById('chk_zamkniete').checked; 
+        const chk_serwisant = document.getElementById('chk_serwisant_group').checked; const sel_serwisant = document.getElementById('sel_serwisant').value.toLowerCase();
+        const chk_typ = document.getElementById('chk_typ_naprawy').checked; const sel_typ = document.getElementById('sel_typ_naprawy').value.toLowerCase();
+        const chk_data_p = document.getElementById('chk_data_przyjecia').checked; const data_p = document.getElementById('inp_przyjecie').value;
+        const chk_data_u = document.getElementById('chk_data_ukonczenia').checked; const data_u = document.getElementById('inp_ukonczenie').value;
+        
+        let przefiltrowani = wszystkieNaprawy.filter(n => { 
+            const nazwaK = (n.klient || '').toLowerCase(); const nazwaS = (n.sprzet || '').toLowerCase(); 
+            if (filters.klient && !nazwaK.includes(filters.klient)) return false; 
+            if (filters.sprzet && !nazwaS.includes(filters.sprzet)) return false; 
+            if (chk_status && (n.status || '').toLowerCase() !== sel_status) return false; 
+            if (chk_otwarte || chk_oczekujace || chk_zamkniete) { 
+                const s = (n.status || '').toLowerCase(); let m = false; 
+                if (chk_otwarte && s.includes('[otwarta]')) m = true; 
+                if (chk_oczekujace && s.includes('[oczekująca]')) m = true; 
+                if (chk_zamkniete && s.includes('[zamknięta]')) m = true; 
+                if (!m) return false; 
+            } 
+            if (chk_serwisant && (n.obslugujacy || '').toLowerCase() !== sel_serwisant) return false;
+            if (chk_typ && (n.rodzaj || n.typ || '').toLowerCase() !== sel_typ) return false;
+            if (chk_data_p) { let dataDodania = n.data_dodania || n.data_przyjecia; if (dataDodania && data_p) { if (parseDateForSort(dataDodania) !== data_p) return false; } else if (data_p) return false; }
+            if (chk_data_u) { let dataUkonczenia = n.ukonczenie || n.data_ukonczenia; if (dataUkonczenia && data_u) { if (parseDateForSort(dataUkonczenia) !== data_u) return false; } else if (data_u) return false; }
+            return true; 
+        }); 
+        
+        if (aktualnaKolumnaSortowania) { 
+            przefiltrowani.sort((a, b) => { 
+                let vA, vB; 
+                if (aktualnaKolumnaSortowania === 'data_dodania') { vA = a.data_dodania || a.data_przyjecia || ''; vB = b.data_dodania || b.data_przyjecia || ''; } 
+                else if (aktualnaKolumnaSortowania === 'ukonczenie') { vA = a.ukonczenie || a.data_ukonczenia || ''; vB = b.ukonczenie || b.data_ukonczenia || ''; } 
+                else if (aktualnaKolumnaSortowania === 'rodzaj') { vA = a.rodzaj || a.typ || ''; vB = b.rodzaj || b.typ || ''; } 
+                else if (aktualnaKolumnaSortowania === 'koszt_naprawy') { vA = a.koszt_naprawy || a.koszt || ''; vB = b.koszt_naprawy || b.koszt || ''; } 
+                else { vA = a[aktualnaKolumnaSortowania] || ''; vB = b[aktualnaKolumnaSortowania] || ''; } 
+                
+                if (['data_dodania', 'ukonczenie'].includes(aktualnaKolumnaSortowania)) { 
+                    vA = vA ? new Date(parseDateForSort(vA)).getTime() || 0 : 0; vB = vB ? new Date(parseDateForSort(vB)).getTime() || 0 : 0; 
+                } else if (['id', 'koszt_naprawy', 'koszt_materialow'].includes(aktualnaKolumnaSortowania)) { 
+                    vA = parseFloat(String(vA).replace(/[^\d.-]/g, '')) || 0; vB = parseFloat(String(vB).replace(/[^\d.-]/g, '')) || 0; 
+                } else if (aktualnaKolumnaSortowania === 'status') { 
+                    vA = String(vA).replace(/^[^a-zA-Z0-9]*/, '').toLowerCase(); vB = String(vB).replace(/^[^a-zA-Z0-9]*/, '').toLowerCase(); 
+                } else { vA = String(vA).toLowerCase(); vB = String(vB).toLowerCase(); } 
+                
+                if (vA < vB) return sortowanieRosnaco ? -1 : 1; if (vA > vB) return sortowanieRosnaco ? 1 : -1; return 0; 
+            }); 
+        } renderujTabele(przefiltrowani); 
+    }
+
+    document.querySelectorAll('.search-form input, .search-form select').forEach(el => { el.addEventListener('input', filtrujNaprawy); el.addEventListener('change', filtrujNaprawy); }); 
+    document.getElementById('chk_otwarte').addEventListener('change', filtrujNaprawy); document.getElementById('chk_oczekujace').addEventListener('change', filtrujNaprawy); document.getElementById('chk_zamkniete').addEventListener('change', filtrujNaprawy);
+    btnDodaj.onclick = () => window.location.href = 'nowa_naprawa.html';
+    tbody.onclick = (e) => { const row = e.target.closest('tr'); if (!row) return; tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected')); row.classList.add('selected'); wybranaNaprawaId = row.getAttribute('data-id'); btnWybierz.classList.remove('btn-disabled'); btnWybierz.disabled = false; btnUsun.classList.remove('btn-disabled'); btnUsun.disabled = false; };
+    tbody.ondblclick = (e) => { const row = e.target.closest('tr'); if (!row) return; tbody.querySelectorAll('tr').forEach(r => r.classList.remove('selected')); row.classList.add('selected'); wybranaNaprawaId = row.getAttribute('data-id'); btnWybierz.classList.remove('btn-disabled'); btnWybierz.disabled = false; btnUsun.classList.remove('btn-disabled'); btnUsun.disabled = false; btnWybierz.click(); };
+    btnWybierz.onclick = () => { if (wybranaNaprawaId) window.location.href = `nowa_naprawa.html?id=${wybranaNaprawaId}&krok=4`; };
+    
+    btnUsun.onclick = () => {
+        if (btnUsun.classList.contains('btn-disabled') || !wybranaNaprawaId) return;
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed'; overlay.style.top = '0'; overlay.style.left = '0'; overlay.style.width = '100vw'; overlay.style.height = '100vh'; overlay.style.backgroundColor = 'rgba(0,0,0,0.6)'; overlay.style.zIndex = '999999'; overlay.style.display = 'flex'; overlay.style.justifyContent = 'center'; overlay.style.alignItems = 'center';
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = '#fff'; modal.style.padding = '25px 30px'; modal.style.borderRadius = '8px'; modal.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)'; modal.style.textAlign = 'center'; modal.style.maxWidth = '450px'; modal.style.fontFamily = "'Segoe UI', sans-serif";
+        modal.innerHTML = `<h3 style="margin-top:0; color:#d32f2f; font-size:20px;">⚠️ UWAGA!</h3><p style="font-size:15px; color:#222; margin-bottom:10px;">Czy na pewno chcesz usunąć naprawę o ID <b>#${wybranaNaprawaId}</b>?</p><p style="font-size:13px; color:#666; margin-bottom:25px; line-height:1.5;">Tej operacji nie można cofnąć!</p><div style="display:flex; justify-content:center; gap:15px;"><button id="modal-btn-tak" style="padding:10px 20px; background:#d32f2f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Tak, usuń</button><button id="modal-btn-nie" style="padding:10px 20px; background:#e0e0e0; color:#333; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Anuluj</button></div>`;
+        overlay.appendChild(modal); document.body.appendChild(overlay);
+        document.getElementById('modal-btn-tak').onclick = () => { document.body.removeChild(overlay); ipcRenderer.send('usun-naprawe', wybranaNaprawaId); };
+        document.getElementById('modal-btn-nie').onclick = () => { document.body.removeChild(overlay); };
+        document.getElementById('modal-btn-tak').onmouseover = function() { this.style.backgroundColor = '#b71c1c'; }; document.getElementById('modal-btn-tak').onmouseout = function() { this.style.backgroundColor = '#d32f2f'; };
+        document.getElementById('modal-btn-nie').onmouseover = function() { this.style.backgroundColor = '#d5d5d5'; }; document.getElementById('modal-btn-nie').onmouseout = function() { this.style.backgroundColor = '#e0e0e0'; };
+    };
+    
+    ipcRenderer.on('naprawa-usunieta', odswiezTabele);
+    window.onload = odswiezTabele;
+</script>
+</body>
+</html>

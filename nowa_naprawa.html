@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>tfs.serwis</title>
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; height: 100vh; overflow: hidden; } 
+        .main-wrapper { display: flex; height: 100vh; width: 100%; } 
+        .content-left { flex: 1; padding: 20px 40px; overflow-y: auto; position: relative; display: flex; flex-direction: column; } 
+        .main-logo-container { position: absolute; top: 5px; left: 40px; z-index: 20; } 
+        .main-logo-container img { width: 200px; height: 100px; object-fit: contain; } 
+        
+        .stats-bar { position: absolute; top: 20px; left: 310px; right: 20px; display: flex; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; height: 60px; align-items: stretch; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; position: relative; flex-grow: 1; cursor: pointer; transition: background-color 0.2s; }
+        .stat-box:hover { background-color: #e4e4e4; }
+        .stat-box.active { background-color: #e4e4e4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-box::after { content: ""; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background-color: #bbb; }
+        .stat-box:last-child::after { display: none; }
+        .stat-label { font-size: 16px !important; color: #444; margin-bottom: 2px; }
+        .stat-number { font-size: 30px !important; font-weight: bold; color: #000; }
+        
+        .form-container { width: 850px; margin-top: 110px; background: transparent; } 
+        h3 { margin-bottom: 20px; font-size: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; } 
+        .row { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; position: relative; } 
+        .label { width: 90px; font-size: 14px; flex-shrink: 0; } 
+        .label-short { width: 80px; font-size: 14px; text-align: right; flex-shrink: 0; } 
+        input[type="text"], input[type="date"], input[type="datetime-local"], select { padding: 6px; border: 1px solid #bbb; border-radius: 3px; font-size: 13px; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box; background-color: #fff; } 
+        .input-error { border-color: #F44336 !important; box-shadow: 0 0 5px rgba(244, 67, 54, 0.4) !important; background-color: #fff8f8 !important; } 
+        .full-width { flex: 1; } 
+        .half-width { width: 180px; } 
+        textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #bbb; resize: none; font-family: inherit; font-size: 13px; background-color: #fff; } 
+        
+        .autocomplete-items { position: absolute; border: 1px solid #bbb; border-radius: 4px; background-color: #fff; z-index: 100; top: 100%; left: 0; right: 0; max-height: 250px; overflow-y: auto; box-shadow: 0 5px 15px rgba(0,0,0,0.15); margin-top: 2px; } 
+        .autocomplete-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #eee; display: flex; flex-direction: column; transition: 0.1s; } 
+        .autocomplete-item:hover { background-color: #f4f7f6; border-left: 3px solid #4CAF50; padding-left: 12px; } 
+        .ac-name { font-weight: bold; font-size: 14px; color: #222; } 
+        .ac-details { font-size: 11px; color: #666; margin-top: 3px; } 
+        
+        .client-badge-success { display: none; background: #e2f3eb; color: #1a7a4c; padding: 10px 15px; border-radius: 4px; margin-bottom: 20px; font-size: 13px; border: 1px solid #c3e6cb; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.05); } 
+        .hw-grid { display: grid; grid-template-columns: 80px 1fr 90px 1fr; gap: 10px 20px; align-items: center; margin-top: 10px; } 
+        .hw-grid label { text-align: right; font-size: 13px; color: #000; } 
+        .hw-grid input, .hw-grid select { width: 100%; } 
+        .owner-badge { display: inline-block; background: #e9e9e9; padding: 8px 15px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; margin-bottom: 15px; } 
+        
+        .step3-grid { display: grid; grid-template-columns: 160px 1fr; gap: 10px 20px; align-items: center; margin-top: 10px; } 
+        .step3-grid label { text-align: left; font-size: 13px; color: #000; } 
+        .step3-grid .align-top { align-self: flex-start; margin-top: 5px; } 
+        .step3-grid input, .step3-grid select, .step3-grid textarea { width: 100%; } 
+        .step3-grid .short-input { width: 250px; } 
+        
+        .photo-upload-container { display: flex; align-items: center; gap: 15px; margin-top: 5px; } 
+        .photo-preview-box { width: 60px; height: 60px; border-radius: 4px; border: 1px solid #ccc; background-size: cover; background-position: center; cursor: pointer; position: relative; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); } 
+        .photo-count-badge { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 4px; font-size: 18px; } 
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; display: none; justify-content: center; align-items: center; } 
+        .modal-content { background: #f4f7f6; padding: 20px 30px; border-radius: 8px; width: 70%; max-height: 80%; overflow-y: auto; position: relative; } 
+        .modal-close { position: absolute; top: 15px; right: 20px; font-size: 28px; cursor: pointer; font-weight: bold; color: #444; } 
+        .modal-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-top: 20px; } 
+        .photo-item { position: relative; border-radius: 4px; overflow: hidden; border: 1px solid #ccc; background: #fff; } 
+        .photo-item img { width: 100%; height: 180px; object-fit: contain; display: block; cursor: pointer; transition: transform 0.2s; } 
+        .photo-remove { position: absolute; top: 5px; right: 5px; background: #F44336; color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; font-weight: bold; display: flex; align-items: center; justify-content: center; } 
+        
+        #fullPhotoModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 2000; background: #000; overflow: hidden; display: none; align-items: center; justify-content: center; } 
+        #fullPhotoImg { cursor: grab; max-width: 90vw; max-height: 90vh; transition: transform 0.05s linear; user-select: none; } 
+        .full-photo-close { position: absolute; top: 20px; right: 30px; font-size: 40px; cursor: pointer; font-weight: bold; color: white; z-index: 2010; } 
+        
+        .sidebar-right { width: 240px; background-color: #f0f0f0; border-left: 1px solid #ccc; padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100vh; box-sizing: border-box; } 
+        .side-btn, .footer-btn, .action-btn-gray { background: linear-gradient(to bottom, #f9f9f9, #e9e9e9); border: 1px solid #aaa; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #000; box-sizing: border-box; } 
+        .side-btn { width: 100%; min-height: 80px; padding: 0 20px; font-size: 15px; justify-content: flex-start; font-weight: bold; } 
+        .side-btn img { width: 40px; height: 40px; object-fit: contain; margin-right: 25px; } 
+        .side-btn:hover, .footer-btn:hover, .action-btn-gray:hover { background: #fff !important; box-shadow: 0 2px 5px rgba(0,0,0,0.05); } 
+        .sidebar-spacer { flex-grow: 1; } 
+        
+        .btn-icon-green { font-size: 16px; color: #4CAF50; font-weight: bold; margin-right: 6px; } 
+        .btn-icon-green-arrow { font-size: 16px; color: #4CAF50; font-weight: bold; margin-left: 6px; } 
+        .btn-icon-back { font-size: 16px; color: #888; font-weight: bold; margin-right: 6px; display: inline-block; transform: scaleX(-1); } 
+        .form-footer { display: flex; justify-content: flex-end; align-items: center; margin-top: 35px; } 
+        .footer-btn { padding: 8px 15px; font-weight: bold; } 
+        .separator { border-left: 1px solid #ccc; height: 30px; margin: 0 5px; } 
+        
+        /* PODSUMOWANIE, WYDRUKI I ROZLICZENIE */
+        .summary-wrapper { width: 100%; margin-top: 110px; margin-bottom: 20px; background: #e9e9e9; border: 1px solid #ccc; border-radius: 5px; padding: 25px 35px; box-sizing: border-box; display: flex; flex-direction: column; flex: 1; } 
+        .summary-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #bbb; padding-bottom: 15px; margin-bottom: 20px; } 
+        .summary-header h2 { margin: 0; font-size: 24px; display: flex; align-items: center; gap: 10px; } 
+        .summary-header .top-buttons { display: flex; flex-direction: row; gap: 10px; } 
+        .action-btn-gray { padding: 8px 15px; font-size: 14px; gap: 8px; } 
+        .summary-client-box { margin-bottom: 30px; } 
+        .summary-client-box h4 { margin: 0 0 15px 0; font-size: 16px; font-weight: bold; } 
+        .client-info-row { display: flex; justify-content: space-between; align-items: flex-start; } 
+        .client-data-grid { display: grid; grid-template-columns: 100px 1fr 100px 1fr; gap: 12px 20px; align-items: center; width: 60%; } 
+        .client-data-grid span.lbl { text-align: right; color: #333; font-size: 14px; } 
+        .sum-client-input { width: 100%; font-size: 14px; box-sizing: border-box; } 
+        .sum-client-input:disabled { background-color: #ffffff; border: 1px dashed #ccc; color: #000; opacity: 1; -webkit-text-fill-color: #000; padding: 6px; border-radius: 3px; } 
+        .sum-client-input:enabled { background-color: #fffce0; border: 1px solid #aaa; padding: 6px; border-radius: 3px; } 
+        
+        .summary-main-split { display: flex; gap: 60px; flex: 1; } 
+        .summary-column { flex: 1; display: flex; flex-direction: column; } 
+        .summary-column h4 { margin: 0 0 15px 0; font-size: 16px; font-weight: bold; } 
+        .sum-grid { display: grid; grid-template-columns: 160px 1fr; gap: 12px 20px; align-items: center; } 
+        .sum-grid label { text-align: left; font-size: 14px; color: #333; } 
+        .sum-grid input, .sum-grid select, .sum-grid textarea { width: 100%; font-size: 14px; padding: 8px 10px; } 
+        .sum-grid input:enabled, .sum-grid select:enabled, .sum-grid textarea:enabled, #sum_h_magazyn:enabled { background-color: #fffce0 !important; border: 1px solid #aaa; } 
+        .sum-grid input:disabled, .sum-grid select:disabled, .sum-grid textarea:disabled, #sum_h_magazyn:disabled { background-color: #ffffff; color: #000; border: 1px dashed #ccc; opacity: 1; -webkit-text-fill-color: #000; } 
+        .summary-column-bottom { margin-top: auto; display: flex; align-items: center; justify-content: flex-end; padding-top: 20px; gap: 10px; } 
+        
+        .print-toolbar { background: #e9e9e9; border: 1px solid #ccc; border-radius: 5px; padding: 10px 15px; display: flex; align-items: center; gap: 15px; margin-bottom: 15px; margin-top: 15px; } 
+        .print-document { background: white; border: 1px solid #ccc; box-shadow: 0 5px 15px rgba(0,0,0,0.1); max-width: 1100px; width: 100%; padding: 40px 50px; margin: 0 auto 40px auto; color: #333; } 
+        .doc-header { display: flex; justify-content: flex-start; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 25px; } 
+        .doc-logo-area { width: 300px; height: 95px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; color: #888; font-size: 13px; cursor: pointer; position: relative; overflow: hidden; background: #fdfdfd; border-radius: 6px; text-align: center; } 
+        .doc-logo-area img { width: 100%; height: 100%; object-fit: contain; display: none; } 
+        .logo-title { font-size: 26px; font-weight: bold; color: #ff6600; display: block; margin-bottom: 2px; } 
+        .doc-title-area { text-align: left; flex: 1; margin-left: 40px; } 
+        .doc-section { margin-bottom: 25px; } 
+        .doc-section h3 { font-size: 17px; display: flex; align-items: center; gap: 10px; margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 6px; color: #222; font-weight: bold; } 
+        .doc-grid { display: grid; grid-template-columns: 180px 1fr; gap: 10px 15px; font-size: 15px; } 
+        .doc-grid span.doc-lbl { color: #666; font-weight: 500; } 
+        .doc-columns { display: flex; gap: 60px; } 
+        .doc-col { flex: 1; } 
+        .doc-footer { margin-top: 40px; font-size: 12px; text-align: justify; color: #555; border-top: 1px solid #eee; padding-top: 15px; line-height: 1.5; } 
+        .doc-signatures { display: flex; justify-content: space-between; margin-top: 70px; } 
+        .doc-sig-box { width: 300px; text-align: center; border-top: 1px solid #888; padding-top: 8px; font-size: 15px; color: #222; } 
+        
+        /* STYLE DLA TABELI ROZLICZEŃ W PODSUMOWANIU */
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: auto; border: 1px solid #ccc; margin-top: 15px; }
+        .table-container table { width: 100%; border-collapse: collapse; min-width: 900px; }
+        .table-container thead th { background-color: #34495e; color: white; padding: 12px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid #455a64; position: sticky; top: 0; z-index: 10; cursor: default; user-select: none; transition: background-color 0.2s; }
+        .table-container tbody tr { border-bottom: 1.5px solid #e0e0e0; transition: 0.1s; cursor: default; }
+        .table-container tbody tr:hover { background-color: #f9f9f9; }
+        .table-container td { padding: 10px; font-size: 13px; color: #2c3e50; border-right: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+        .table-container td:last-child { border-right: none; }
+        .id-badge { background: #f0f0f0; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: #333; display: inline-block; border: 1px solid #ccc; }
+        .cell-truncate { display: block; max-width: 140px; margin: 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; }
+
+        /* Formularz rozliczenia */
+        .billing-panel { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; gap: 30px; margin-top: 20px; }
+        .billing-left { width: 180px; border-right: 1px solid #eee; padding-right: 20px; display: flex; flex-direction: column; }
+        .billing-left-header { display: flex; align-items: center; gap: 10px; font-weight: bold; color: #444; margin-bottom: 25px; font-size: 14px; }
+        .billing-left-header img { width: 28px; height: 28px; object-fit: contain; filter: grayscale(100%) opacity(70%); }
+        .radio-group { display: flex; flex-direction: column; gap: 15px; }
+        .radio-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #333; }
+        .radio-label input[type="radio"] { transform: scale(1.2); cursor: pointer; margin: 0; }
+        .billing-middle { display: grid; grid-template-columns: auto 120px auto 120px; gap: 15px 20px; align-items: center; }
+        .billing-middle label { font-size: 13px; color: #222; text-align: right; }
+        .billing-middle input { width: 100%; padding: 8px; border: 1px solid #bbb; border-radius: 4px; font-size: 14px; box-sizing: border-box; background-color: #fff; transition: border 0.2s; }
+        .billing-middle input:focus { border-color: #4CAF50; outline: none; }
+        .billing-right { flex: 1; display: flex; flex-direction: column; }
+        .billing-right label { font-size: 13px; color: #222; margin-bottom: 5px; }
+        .billing-right textarea { width: 100%; flex-grow: 1; min-height: 120px; padding: 10px; border: 1px solid #bbb; border-radius: 4px; font-size: 14px; resize: none; font-family: inherit; box-sizing: border-box; }
+
+        @media print { body * { visibility: hidden; } #print_area, #print_area * { visibility: visible; } #print_area { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; border: none; padding: 0; margin: 0; } .print-toolbar { display: none; } .doc-logo-area { border: none !important; background: transparent !important; } }
+    </style>
+</head>
+<body>
+    <div class="main-wrapper">
+        <div class="content-left">
+            <div class="main-logo-container"><img src="img/logo-tfs.serwis.png" alt="Logo"></div>
+            
+            <div class="stats-bar">
+                <div class="stat-box" onclick="window.location.href='naprawy_w_trakcie.html'" title="Pokaż w trakcie">
+                    <span class="stat-label">Naprawy w trakcie</span>
+                    <span class="stat-number" id="stat_w_trakcie">0</span>
+                </div>
+                <div class="stat-box" onclick="window.location.href='naprawy_wygasajace.html'" title="Pokaż wygasające">
+                    <span class="stat-label">Naprawy wygasające</span>
+                    <span class="stat-number" id="stat_wygasajace">0</span>
+                </div>
+                <div class="stat-box" onclick="window.location.href='naprawy_po_terminie.html'" title="Pokaż po terminie">
+                    <span class="stat-label">Naprawy po terminie</span>
+                    <span class="stat-number" id="stat_po_terminie">0</span>
+                </div>
+            </div>
+
+            <div class="form-container" id="step1_client">
+                <h3>Krok 1: Dane klienta</h3>
+                <div id="selected_client_badge" class="client-badge-success"><span>✅ Powiązano z istniejącym klientem: <b id="badge_client_name"></b></span><button onclick="resetClientSelection(event)" style="background:none; border:none; color:#d32f2f; font-weight:bold; cursor:pointer; font-size: 12px;">✖ Rozłącz i utwórz nowego</button></div>
+                <div class="row"><span class="label">Imię:</span><input type="text" id="c_imie" class="half-width" autocomplete="off"><span class="label-short">Nazwisko:</span><input type="text" id="c_nazwisko" class="full-width" autocomplete="off"></div>
+                <div class="row"><span class="label">Firma:</span><input type="text" id="c_firma" class="full-width" autocomplete="off"></div>
+                <div class="row"><span class="label">NIP:</span><input type="text" id="c_nip" style="width: 150px;" autocomplete="off"></div>
+                <div class="row"><span class="label">Ulica:</span><input type="text" id="c_ulica" class="full-width" autocomplete="off"></div>
+                <div class="row"><span class="label">Nr domu:</span><input type="text" id="c_dom" class="full-width" autocomplete="off"><span class="label-short">Nr lokalu:</span><input type="text" id="c_lokal" class="half-width" autocomplete="off"></div>
+                <div class="row"><span class="label">Miasto:</span><input type="text" id="c_miasto" class="full-width" autocomplete="off"><span class="label-short">Kod:</span><input type="text" id="c_kod" class="half-width" autocomplete="off"></div>
+                <div class="row"><span class="label">E-mail:</span><input type="text" id="c_mail" class="full-width" autocomplete="off"><span class="label-short">Telefon:</span><input type="text" id="c_tel" class="half-width" autocomplete="off"></div>
+                <div class="row"><span class="label">E-mail 2:</span><input type="text" id="c_mail2" class="full-width" autocomplete="off"><span class="label-short">Telefon 2:</span><input type="text" id="c_tel2" class="half-width" autocomplete="off"></div>
+                <p style="margin-top: 30px; font-size: 14px; font-weight: bold;">Opis (niedrukowany):</p>
+                <textarea id="c_opis" style="height: 120px;"></textarea>
+                <div class="form-footer"><button onclick="addClientOnly()" class="footer-btn"><span class="btn-icon-green">✚</span> <span>Zapisz klienta (bez naprawy)</span></button><div class="separator"></div><button onclick="proceedToHardware()" class="footer-btn"><span>Dalej</span> <span class="btn-icon-green-arrow">➜</span></button></div>
+            </div>
+
+            <div class="form-container" id="step2_hardware" style="display: none;">
+                <h3>Krok 2: Nowy sprzęt</h3>
+                <div class="owner-badge">Przypisany klient: <strong id="h_wlasciciel_display"></strong></div>
+                <div class="hw-grid">
+                    <label>Nazwa:</label> <input type="text" id="h_nazwa">
+                    <label>Typ:</label> <select id="h_typ"><option>Laptop</option><option>PC</option><option>Telefon</option><option>Konsola</option><option>AGD</option><option>Inny</option></select>
+                    <label>S/N:</label> <input type="text" id="h_sn">
+                    <label>Stan:</label> <input type="text" id="h_stan">
+                    <label>Bateria:</label> <input type="text" id="h_bateria">
+                    <label>Zasilacz:</label> <input type="text" id="h_zasilacz">
+                    <label>Magazyn:</label> <select id="h_status"><option>🟩 [W serwisie] W serwisie</option><option>🟥 [W serwisie] Do odbioru</option><option>🟧 [Poza serwisem] W serwisie zewnętrznym</option><option>🟪 [Poza serwisem] U klienta / usługa serwisowa</option><option>🟨 [Poza serwisem] Wysłany</option><option>⬜ [Sprzęt wydany] Poza ewidencją</option><option>🟦 [Sprzęt wydany] Odebrany</option></select>
+                    <label>Gwarancja:</label> <input type="date" id="h_gwarancja">
+                </div>
+                <p style="margin-top: 30px; font-size: 14px; font-weight: bold;">Inne:</p>
+                <textarea id="h_inne" style="height: 120px;"></textarea>
+                <div class="form-footer" style="justify-content: flex-start;"><button onclick="goBackToClient()" class="footer-btn"><span class="btn-icon-back">➜</span> <span>Wstecz</span></button><div style="flex-grow: 1;"></div><button onclick="proceedToRepair()" class="footer-btn"><span>Dalej</span> <span class="btn-icon-green-arrow">➜</span></button></div>
+            </div>
+
+            <div class="form-container" id="step3_repair" style="display: none;">
+                <h3>Krok 3: Szczegóły naprawy</h3>
+                <div class="step3-grid">
+                    <label>Data przyjęcia<br>do serwisu:</label><div><input type="datetime-local" id="r_data_przyjecia" class="short-input"></div>
+                    <label>Przewidywana data<br>ukończenia naprawy:</label><div><input type="date" id="r_data_ukonczenia" class="short-input"></div>
+                    <label>Typ naprawy:</label><div><select id="r_typ_naprawy" class="short-input"><option>Niegwarancyjna</option><option>Gwarancyjna</option><option>Pogwarancyjna</option><option>Umowa</option></select></div>
+                    <label>Przewidywany koszt:</label><div><input type="text" id="r_przewidywany_koszt" class="short-input"></div>
+                    <label class="align-top">Opis uszkodzenia<br><span style="font-size: 11px; font-weight: normal;">(drukowany na karcie przyjęcia i wydania):</span></label><textarea id="r_opis_uszkodzenia" rows="3"></textarea>
+                    <label class="align-top">Opis naprawy<br><span style="font-size: 11px; font-weight: normal;">(drukowany na karcie wydania):</span></label><textarea id="r_opis_naprawy" rows="3"></textarea>
+                    <label class="align-top">Komentarz:</label><textarea id="r_komentarz" rows="3"></textarea>
+                    <label>Status początkowy:</label><div><select id="r_status_poczatkowy" class="short-input"><option>⬜ [Otwarta] Nowa naprawa</option><option>🟩 [Otwarta] Naprawa rozpoczęta</option><option>🟨 [Oczekująca] Oczekuje na części</option><option>🟧 [Oczekująca] Serwis zewnętrzny</option><option>🟦 [Zamknięta] Naprawa ukończona</option><option>🟥 [Zamknięta] Naprawa niewykonana</option></select></div>
+                    <label class="align-top" style="margin-top: 15px;">Zdjęcia usterki:</label>
+                    <div class="photo-upload-container">
+                        <button type="button" class="action-btn-gray" onclick="document.getElementById('r_zdjecia').click()" style="padding: 10px 15px;">📷 Dodaj zdjęcia</button>
+                        <input type="file" id="r_zdjecia" multiple accept="image/*" style="display: none;" onchange="handlePhotoUpload(event)">
+                        <div id="photo_preview_box" class="photo-preview-box" onclick="openPhotoModal(event)" title="Pokaż galerię"><div id="photo_count_badge" class="photo-count-badge"></div></div>
+                    </div>
+                </div>
+                <div class="form-footer" style="justify-content: flex-start;"><button onclick="goBackToHardware()" class="footer-btn"><span class="btn-icon-back">➜</span> <span>Wstecz</span></button><div style="flex-grow: 1;"></div><button onclick="saveFullRepair()" class="footer-btn"><span class="btn-icon-green">✚</span> <span>Zakończ i Zapisz</span></button></div>
+            </div>
+
+            <div class="summary-wrapper" id="step4_summary" style="display: none;">
+                <div class="summary-header">
+                    <h2><span style="font-size: 24px;">🛠️</span> Naprawa</h2>
+                    <div class="top-buttons">
+                        <button class="action-btn-gray" style="background: #fff; font-weight: bold;" onclick="goToPodsumowanie()">📃 <span>Podsumowanie</span></button>
+                        <button class="action-btn-gray" onclick="goToRozliczenie()">💰 <span>Rozliczenie</span></button>
+                        <button class="action-btn-gray" onclick="goToWydruki()">🖨️ <span>Wydruki</span></button>
+                    </div>
+                </div>
+                <div class="summary-client-box">
+                    <h4>Zleceniodawca</h4>
+                    <div class="client-info-row">
+                        <div class="client-data-grid"><span class="lbl">Imię:</span> <input type="text" id="sum_c_imie" class="sum-client-input" disabled><span class="lbl">E-Mail:</span> <input type="text" id="sum_c_mail" class="sum-client-input" disabled><span class="lbl">Nazwisko:</span> <input type="text" id="sum_c_nazwisko" class="sum-client-input" disabled><span class="lbl">Telefon:</span> <input type="text" id="sum_c_tel" class="sum-client-input" disabled></div>
+                        <div class="top-buttons" style="display: flex; flex-direction: row; gap: 10px; align-items: flex-start;"><button class="action-btn-gray" onclick="window.location.href='klienci.html?id=' + globalClientId">👤 <span>Karta klienta</span></button><button class="action-btn-gray" onclick="window.location.href='sprzęt.html?id=' + globalHardwareId">🖥️ <span>Karta sprzętu</span></button></div>
+                    </div>
+                </div>
+                <div class="summary-main-split">
+                    <div class="summary-column">
+                        <h4>Naprawa</h4>
+                        <div class="sum-grid">
+                            <label>Status naprawy:</label><select id="sum_status_naprawy"><option>⬜ [Otwarta] Nowa naprawa</option><option>🟩 [Otwarta] Naprawa rozpoczęta</option><option>🟨 [Oczekująca] Oczekuje na części</option><option>🟧 [Oczekująca] Serwis zewnętrzny</option><option>🟦 [Zamknięta] Naprawa ukończona</option><option>🟥 [Zamknięta] Naprawa niewykonana</option></select>
+                            <label>Data przyjęcia:</label> <input type="datetime-local" id="sum_data_przyjecia">
+                            <label>Przewidywana data<br>ukończenia:</label> <input type="date" id="sum_data_ukonczenia">
+                            <label>Typ naprawy:</label> <select id="sum_typ_naprawy"><option>Niegwarancyjna</option><option>Gwarancyjna</option><option>Pogwarancyjna</option><option>Umowa</option></select>
+                            <label>Koszt (drukowany):</label> <input type="text" id="sum_koszt">
+                            <label class="align-top">Opis uszkodzenia<br><span style="font-size: 11px; font-weight: normal;">(drukowany na karcie przyjęcia i wydania):</span></label> <textarea id="sum_opis_uszkodzenia" rows="4"></textarea>
+                            <label class="align-top">Opis naprawy<br><span style="font-size: 11px; font-weight: normal;">(drukowany na karcie wydania):</span></label><textarea id="sum_opis_naprawy" rows="4"></textarea>
+                            <label class="align-top">Komentarz:</label> <textarea id="sum_komentarz" rows="4"></textarea>
+                        </div>
+                    </div>
+                    <div class="summary-column">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0;">Sprzęt</h4>
+                            <button class="action-btn-gray" id="btn_edit_save" onclick="toggleEditSave()">✏️ <span>Edytuj</span></button>
+                        </div>
+                        <div class="sum-grid">
+                            <label>Nazwa:</label> <input type="text" id="sum_h_nazwa">
+                            <label>Typ:</label> <select id="sum_h_typ"><option>Laptop</option><option>PC</option><option>Telefon</option><option>Konsola</option><option>AGD</option><option>Inny</option></select>
+                            <label>S/N:</label> <input type="text" id="sum_h_sn"><label>Stan:</label> <input type="text" id="sum_h_stan"><label>Bateria:</label> <input type="text" id="sum_h_bateria"><label>Zasilacz:</label> <input type="text" id="sum_h_zasilacz"><label>Gwarancja:</label> <input type="date" id="sum_h_gwarancja"><label class="align-top">Inne:</label> <textarea id="sum_h_inne" rows="5"></textarea>
+                        </div>
+                        <div class="summary-column-bottom">
+                            <button id="btn_sum_pokaz_zdjecia" class="action-btn-gray" onclick="openPhotoModal(event)" style="display: none; font-weight: bold;">🖼️ Pokaż zdjęcia</button>
+                            <button id="btn_sum_dodaj_zdjecia" class="action-btn-gray" onclick="document.getElementById('r_zdjecia').click()" style="display: none; font-weight: bold;">📷 Dodaj zdjęcia</button>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-left: auto;">
+                                <label style="font-size: 14px; font-weight: bold; color: #333;">Magazyn:</label>
+                                <select id="sum_h_magazyn" style="width: 250px;" disabled><option>🟩 [W serwisie] W serwisie</option><option>🟥 [W serwisie] Do odbioru</option><option>🟧 [Poza serwisem] W serwisie zewnętrznym</option><option>🟪 [Poza serwisem] U klienta / usługa serwisowa</option><option>🟨 [Poza serwisem] Wysłany</option><option>⬜ [Sprzęt wydany] Poza ewidencją</option><option>🟦 [Sprzęt wydany] Odebrany</option></select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="summary-wrapper" id="step5_wydruki" style="display: none; background: transparent; border: none; padding: 0;">
+                <div class="summary-header" style="background: #e9e9e9; border: 1px solid #ccc; border-radius: 5px; padding: 25px 35px; margin-bottom: 0;">
+                    <h2><span style="font-size: 24px;">🛠️</span> Naprawa</h2>
+                    <div class="top-buttons">
+                        <button class="action-btn-gray" onclick="goToPodsumowanie()">📃 <span>Podsumowanie</span></button>
+                        <button class="action-btn-gray" onclick="goToRozliczenie()">💰 <span>Rozliczenie</span></button>
+                        <button class="action-btn-gray" style="background: #fff; font-weight: bold;">🖨️ <span>Wydruki</span></button>
+                    </div>
+                </div>
+                <div class="print-toolbar">
+                    <button class="action-btn-gray" onclick="window.print()">🖨️ <span>Wydrukuj</span></button>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;"><span style="font-size: 14px;">Szablon:</span>
+                        <select id="print_template_select" style="width: 250px;" onchange="changePrintTemplate()">
+                            <option value="przyjecie">Przyjęcie sprzętu do naprawy</option>
+                            <option value="wydanie">Wydanie sprzętu po naprawie</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="print-document" id="print_area">
+                    <div class="doc-header">
+                        <div class="doc-logo-area" id="logoContainer" title="Kliknij, aby wczytać swoje logo"><span id="logoPlaceholderText"><span class="logo-title">Serwis sprzętu</span><small>Miejsce na Twoje logo</small><br></span><img id="logoPreview" src=""><input type="file" id="logoUpload" accept="image/*" style="display: none;"></div>
+                        <div class="doc-title-area"><h1 id="print_main_title" style="margin: 0; font-size: 28px; font-weight: 900; color: #111;">Dowód przyjęcia sprzętu do naprawy</h1></div>
+                    </div>
+                    <div class="doc-columns">
+                        <div class="doc-col">
+                            <div class="doc-section"><h3>🧑 Właściciel</h3><div class="doc-grid"><span class="doc-lbl">Imię i nazwisko:</span> <span id="p_wlasciciel"></span><span class="doc-lbl">Kontakt:</span> <span id="p_kontakt"></span></div></div>
+                            <div class="doc-section"><h3>🛠️ Naprawa</h3><div class="doc-grid">
+                                <span class="doc-lbl">Data przyjęcia:</span> <span id="p_data_przyjecia"></span>
+                                <span class="doc-lbl">Przewidywane ukończenie:</span> <span id="p_data_ukonczenia"></span>
+                                <span class="doc-lbl" style="grid-column: 1 / -1; margin-top: 5px;">Opis uszkodzenia:</span><span id="p_opis" style="grid-column: 1 / -1; min-height: 40px; color: #222;"></span>
+                                <span class="doc-lbl" id="p_opis_naprawy_lbl" style="display: none; grid-column: 1 / -1; margin-top: 10px;">Opis naprawy:</span><span id="p_opis_naprawy_val" style="grid-column: 1 / -1; min-height: 40px; color: #222; display: none;"></span>
+                            </div></div>
+                        </div>
+                        <div class="doc-col">
+                            <div class="doc-section"><h3>⚙️ Sprzęt</h3><div class="doc-grid"><span class="doc-lbl">Nazwa sprzętu:</span> <span id="p_sprzet_nazwa"></span><span class="doc-lbl">Numer seryjny (S/N):</span> <span id="p_sprzet_sn"></span></div></div>
+                        </div>
+                    </div>
+                    <div class="doc-footer" style="text-align: left; color: #333;">
+                        <h4 style="text-align: center; font-size: 15px; margin: 0 0 10px 0; color: #111;">Zgody i oświadczenia</h4>
+                        <ol style="padding-left: 20px; margin: 0; line-height: 1.6;">
+                            <li style="margin-bottom: 5px;">Klient wyraża zgodę na przetwarzanie danych osobowych w celu realizacji usługi oraz na przeprowadzenie diagnostyki sprzętu.</li>
+                            <li style="margin-bottom: 5px;">Serwis nie ponosi odpowiedzialności za dane znajdujące się na nośnikach przekazanego sprzętu. Klient oświadcza, że wykonał kopię zapasową ważnych plików.</li>
+                            <li style="margin-bottom: 5px;">W przypadku nieodebrania sprzętu w terminie 90 dni od powiadomienia o zakończeniu naprawy, serwis będzie uprawniony do naliczania opłaty za bezumowne przechowywanie w wysokości 5 zł za każdy dzień zwłoki.</li>
+                            <li style="margin-bottom: 5px;">Gwarancja na usługę:
+                                <ul style="padding-left: 20px; margin-top: 5px; margin-bottom: 5px; list-style-type: disc;">
+                                    <li style="margin-bottom: 3px;">Serwis udziela gwarancji na wykonaną naprawę na okres 3 miesięcy od daty odbioru sprzętu.</li>
+                                    <li style="margin-bottom: 3px;">Gwarancja dotyczy wyłącznie zakresu wykonanych prac i części wymienionych w dokumencie wydania.</li>
+                                    <li style="margin-bottom: 3px;">Gwarancja nie obejmuje uszkodzeń mechanicznych, zalania sprzętu oraz uszkodzeń wynikających z niewłaściwego użytkowania.</li>
+                                    <li style="margin-bottom: 3px;">Zerwanie plomb gwarancyjnych serwisu powoduje utratę uprawnień gwarancyjnych.</li>
+                                </ul>
+                            </li>
+                            <li>Wydanie sprzętu następuje po okazaniu niniejszej karty.</li>
+                        </ol>
+                    </div>
+                    <div class="doc-signatures"><div class="doc-sig-box" id="p_podpis_klient">Podpis właściciela</div><div class="doc-sig-box">Serwis sprzętu</div></div>
+                </div>
+            </div>
+
+            <div class="summary-wrapper" id="step6_rozliczenie" style="display: none; background: transparent; border: none; padding: 0;">
+                <div class="summary-header" style="background: #e9e9e9; border: 1px solid #ccc; border-radius: 5px; padding: 25px 35px; margin-bottom: 0;">
+                    <h2><span style="font-size: 24px;">🛠️</span> Naprawa</h2>
+                    <div class="top-buttons">
+                        <button class="action-btn-gray" onclick="goToPodsumowanie()">📃 <span>Podsumowanie</span></button>
+                        <button class="action-btn-gray" style="background: #fff; font-weight: bold;">💰 <span>Rozliczenie</span></button>
+                        <button class="action-btn-gray" onclick="goToWydruki()">🖨️ <span>Wydruki</span></button>
+                    </div>
+                </div>
+
+                <div id="rozliczenie_brak" style="text-align: center; padding: 60px 20px; background: #e9e9e9; border: 1px solid #ccc; border-radius: 5px; margin-top: 20px;">
+                    <h3 style="border: none; margin-bottom: 10px;">Ta naprawa nie ma jeszcze przypisanego rozliczenia.</h3>
+                    <p style="color: #666; margin-bottom: 30px;">Zdefiniuj koszty i status, aby łatwiej zarządzać swoimi przychodami.</p>
+                    <button class="footer-btn" onclick="pokazFormularzRozliczenia()" style="margin: 0 auto; padding: 12px 25px; font-size: 15px;"><span class="btn-icon-green">✚</span> Dodaj rozliczenie</button>
+                </div>
+
+                <div id="rozliczenie_tabela" style="display: none;">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data dodania</th>
+                                    <th>Kwota netto</th>
+                                    <th>Kwota brutto</th>
+                                    <th>Koszt części</th>
+                                    <th>Koszt pracy</th>
+                                    <th>Opis</th>
+                                    <th>Status</th>
+                                    <th>Data rozliczenia</th>
+                                    <th>Rozliczył</th>
+                                    <th>Akcja</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rozliczenie_tbody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="rozliczenie_form" style="display: none;">
+                    <div class="billing-panel">
+                        <div class="billing-left">
+                            <div class="billing-left-header">
+                                <img src="img/ikonka-rozliczenia.png">
+                                <span>Rozliczenie</span>
+                            </div>
+                            <div class="radio-group">
+                                <label class="radio-label">
+                                    <input type="radio" name="b_status" value="Nierozliczony" checked> 
+                                    <span style="color: #c62828;">❔ Nierozliczony</span>
+                                </label>
+                                <label class="radio-label">
+                                    <input type="radio" name="b_status" value="Rozliczony"> 
+                                    <span style="color: #2e7d32;">✅ Rozliczony</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="billing-middle">
+                            <label>Kwota netto:</label> <input type="text" id="b_kwota_netto" placeholder="0,00" oninput="przeliczKwoty(this)">
+                            <label>Kwota brutto:</label> <input type="text" id="b_kwota_brutto" placeholder="0,00" oninput="przeliczKwoty(this)">
+                            
+                            <label>Koszt części:</label> <input type="text" id="b_koszt_czesci" placeholder="0,00">
+                            <label>Koszt pracy:</label> <input type="text" id="b_koszt_pracy" placeholder="0,00">
+                            
+                            <label>Koszt zewn.:</label> <input type="text" id="b_koszt_zewnetrzny" placeholder="0,00">
+                            <span></span><span></span>
+                        </div>
+                        
+                        <div class="billing-right">
+                            <label>Opis / Notatka:</label>
+                            <textarea id="b_opis"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-footer" style="justify-content: flex-end;">
+                        <button onclick="anulujEdycjeRozliczenia()" class="footer-btn action-btn-gray" id="btn_anuluj_rozliczenie" style="display: none;"><span>Anuluj</span></button>
+                        <button onclick="zapiszRozliczenieTab()" class="footer-btn"><span class="btn-icon-green">💾</span> <span id="btn_zapisz_rozliczenie_txt">Zapisz rozliczenie</span></button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="sidebar-right">
+            <a href="index.html" style="text-decoration: none; display: block;"><button class="side-btn"><img src="img/ikonka-home.png"> <span>Home</span></button></a>
+            <a href="sprzęt.html" style="text-decoration: none; display: block;"><button class="side-btn"><img src="img/ikonka-sprzęt.png"> <span>Sprzęt</span></button></a>
+            <a href="klienci.html" style="text-decoration: none; display: block;"><button class="side-btn"><img src="img/ikonka-klienci.png"> <span>Klienci</span></button></a>
+            <a href="naprawy.html" style="text-decoration: none; display: block;"><button class="side-btn"><img src="img/ikonka-naprawy.png"> <span>Naprawy</span></button></a>
+            <div class="sidebar-spacer"></div>
+            <a href="rozliczenia.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-rozliczenia.png"> <span>Rozliczenia</span></button></a>
+            <button class="side-btn"><img src="img/ikonka-statystyki.png"> <span>Statystyki</span></button>
+            <button class="side-btn"><img src="img/ikonka-konfiguracja.png"> <span>Konfiguracja</span></button>
+            <button class="side-btn"><img src="img/ikonka-wyloguj.png"> <span>Wyloguj</span></button>
+        </div>
+    </div>
+
+    <div id="photoModal" class="modal-overlay" onclick="closePhotoModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()"><span class="modal-close" onclick="closePhotoModal(event)">&times;</span><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;"><h2 style="margin: 0;">Galeria zdjęć</h2></div><div id="modalGallery" class="modal-gallery"></div></div>
+    </div>
+
+    <div id="fullPhotoModal" onclick="closeFullPhotoModal(event)"><span class="full-photo-close" onclick="closeFullPhotoModal(event)">&times;</span><img id="fullPhotoImg" src="" alt="Powiększone zdjęcie" draggable="false"></div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        let blokadaZapisu = false, globalClientId = null, globalHardwareId = null, globalRepairId = null, globalRozliczenieId = null, dodanyWlascicielString = "", isEditing = false, allClientsList = []; 
+
+        function parseDateForSort(dateStr) { 
+            if (!dateStr) return null; 
+            if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; 
+            const parts = dateStr.split('-'); 
+            if (parts.length === 3) { 
+                if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; 
+                if (parts[0].length === 4) return dateStr; 
+            } 
+            return dateStr; 
+        }
+
+        // Pomocnicze funkcje formatowania (jak w rozliczenia.html)
+        function formatMoney(amount) {
+            if (amount === undefined || amount === null || amount === '') return "0,00 zł";
+            let parsed = parseFloat(String(amount).replace(',', '.').replace(/[^\d.-]/g, ''));
+            if (isNaN(parsed)) return "0,00 zł";
+            return parsed.toFixed(2).replace('.', ',') + " zł";
+        }
+        function formatujDateTabela(dataStr) { 
+            if (!dataStr) return ''; 
+            if (dataStr.includes('T')) dataStr = dataStr.split('T')[0]; 
+            const p = dataStr.split('-'); 
+            if(p.length === 3) { if(p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`; return `${p[0]}-${p[1]}-${p[2]}`; } 
+            return dataStr; 
+        }
+
+        async function zaladujStatystyki() {
+            try {
+                const pobrane = await ipcRenderer.invoke('get-naprawy') || [];
+                let wTrakcie = 0, poTerminie = 0, wygasajace = 0;
+                const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+                const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+                pobrane.forEach(n => {
+                    const status = (n.status || '').toLowerCase();
+                    if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                        let dataU = n.ukonczenie || n.data_ukonczenia;
+                        let isPoTerminie = false;
+
+                        if (dataU) {
+                            let normalnaData = parseDateForSort(dataU);
+                            if (normalnaData) {
+                                let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                                if (termin < dzisiaj) { poTerminie++; isPoTerminie = true; } 
+                                else if (termin >= dzisiaj && termin <= za4Dni) { wygasajace++; }
+                            }
+                        }
+
+                        if (!isPoTerminie) { wTrakcie++; }
+                    }
+                });
+
+                document.getElementById('stat_w_trakcie').textContent = wTrakcie;
+                document.getElementById('stat_wygasajace').textContent = wygasajace;
+                document.getElementById('stat_po_terminie').textContent = poTerminie;
+            } catch(e) { console.error("Błąd ładowania statystyk:", e); }
+        }
+
+        function showClientSuggestions(inputElement, searchTerm) {
+            closeAllLists(); if (!searchTerm.trim()) return;
+            const row = inputElement.closest('.row'), a = document.createElement("DIV"); a.setAttribute("class", "autocomplete-items"); row.appendChild(a);
+            let count = 0; const term = searchTerm.toLowerCase().trim();
+            for (let i = 0; i < allClientsList.length; i++) {
+                const client = allClientsList[i];
+                const searchString = `${client.imie || ''} ${client.nazwisko || ''} ${client.firma || ''} ${client.nip || ''} ${client.ulica || ''} ${client.miasto || ''} ${client.kod || ''} ${client.email || ''} ${client.email2 || ''} ${client.tel || ''} ${client.tel2 || ''}`.toLowerCase();
+                if (searchString.includes(term)) {
+                    count++; const b = document.createElement("DIV"); b.className = "autocomplete-item";
+                    let nazwaK = `${client.imie || ''} ${client.nazwisko || ''}`.trim(); if (!nazwaK) nazwaK = client.firma || 'Brak nazwy';
+                    let details = []; if (client.firma && nazwaK !== client.firma) details.push(`🏢 ${client.firma}`); if (client.tel) details.push(`📞 ${client.tel}`); if (client.email) details.push(`📧 ${client.email}`); if (client.miasto) details.push(`🏠 ${client.miasto}`);
+                    b.innerHTML = `<span class="ac-name">${nazwaK}</span><span class="ac-details">${details.join(' | ')}</span>`;
+                    b.onclick = function(e) { fillClientForm(client); closeAllLists(); }; a.appendChild(b);
+                } if(count >= 8) break; 
+            } if(count === 0) closeAllLists();
+        }
+
+        function fillClientForm(client) {
+            globalClientId = client.id; 
+            document.getElementById('c_imie').value = client.imie || ''; 
+            document.getElementById('c_nazwisko').value = client.nazwisko || ''; 
+            document.getElementById('c_firma').value = client.firma || ''; 
+            document.getElementById('c_nip').value = client.nip || ''; 
+            document.getElementById('c_ulica').value = client.ulica || ''; 
+            document.getElementById('c_dom').value = client.dom || ''; 
+            document.getElementById('c_lokal').value = client.lokal || ''; 
+            document.getElementById('c_miasto').value = client.miasto || ''; 
+            document.getElementById('c_kod').value = client.kod || ''; 
+            document.getElementById('c_mail').value = client.email || client.email2 || ''; 
+            document.getElementById('c_tel').value = client.tel || ''; 
+            document.getElementById('c_mail2').value = client.email2 || ''; 
+            document.getElementById('c_tel2').value = client.tel2 || ''; 
+            document.getElementById('c_opis').value = client.opis || '';
+            
+            inputsToWatch.forEach(id => { const el = document.getElementById(id); if(el) { el.classList.remove('input-error'); } });
+            let nazwaK = `${client.imie || ''} ${client.nazwisko || ''}`.trim(); if (!nazwaK) nazwaK = client.firma || 'Brak nazwy';
+            document.getElementById('badge_client_name').textContent = nazwaK; 
+            document.getElementById('selected_client_badge').style.display = 'flex';
+        }
+
+        function closeAllLists(elmnt) { const x = document.getElementsByClassName("autocomplete-items"); for (let i = 0; i < x.length; i++) { if (elmnt != x[i]) { x[i].parentNode.removeChild(x[i]); } } }
+        document.onclick = function (e) { closeAllLists(e.target); };
+        function resetClientSelection(e) { if(e) e.preventDefault(); globalClientId = null; document.getElementById('selected_client_badge').style.display = 'none'; }
+        function handleMainFieldInput() { if(globalClientId) { resetClientSelection(); } }
+
+        let repairPhotos = [];
+        function handlePhotoUpload(event) {
+            const files = event.target.files; if (!files || files.length === 0) return;
+            for(let i = 0; i < files.length; i++) {
+                const reader = new FileReader();
+                reader.onload = (e) => { repairPhotos.push(e.target.result); updatePhotoPreview(); if (document.getElementById('photoModal').style.display === 'flex') { renderModalPhotos(); } };
+                reader.readAsDataURL(files[i]);
+            } event.target.value = '';
+        }
+
+        function updatePhotoPreview() {
+            const box = document.getElementById('photo_preview_box'), badge = document.getElementById('photo_count_badge'), sumPokazBtn = document.getElementById('btn_sum_pokaz_zdjecia');
+            if(repairPhotos.length > 0) {
+                if(box) { box.style.display = 'block'; box.style.backgroundImage = `url('${repairPhotos[0]}')`; }
+                if(sumPokazBtn) sumPokazBtn.style.display = 'block';
+                if(repairPhotos.length > 1) { if(badge) { badge.textContent = `+${repairPhotos.length - 1}`; badge.style.display = 'flex'; } } else { if(badge) badge.style.display = 'none'; }
+            } else { if(box) box.style.display = 'none'; if(sumPokazBtn) sumPokazBtn.style.display = 'none'; }
+        }
+
+        function openPhotoModal(event) { if (event) event.stopPropagation(); document.getElementById('photoModal').style.display = 'flex'; renderModalPhotos(); }
+        function closePhotoModal(event) { if (event) event.stopPropagation(); document.getElementById('photoModal').style.display = 'none'; }
+        function removePhoto(index, event) { if (event) event.stopPropagation(); repairPhotos.splice(index, 1); updatePhotoPreview(); renderModalPhotos(); if (repairPhotos.length === 0 && document.getElementById('step4_summary').style.display === 'flex') { closePhotoModal(); } }
+
+        function renderModalPhotos() {
+            const gallery = document.getElementById('modalGallery'); gallery.innerHTML = '';
+            if (repairPhotos.length === 0) { gallery.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #777;">Brak zdjęć.</p>'; return; }
+            repairPhotos.forEach((photoBase64, index) => {
+                const item = document.createElement('div'); item.className = 'photo-item';
+                const canDelete = !(document.getElementById('step4_summary').style.display === 'flex' && !isEditing);
+                const deleteBtnHtml = canDelete ? `<button class="photo-remove" title="Usuń zdjęcie" onclick="removePhoto(${index}, event)">✖</button>` : '';
+                item.innerHTML = `<img src="${photoBase64}" alt="Zdjęcie usterki ${index + 1}" title="Kliknij, by powiększyć" onclick="openFullPhotoModal(${index})">${deleteBtnHtml}`; gallery.appendChild(item);
+            });
+        }
+
+        const fullPhotoModal = document.getElementById('fullPhotoModal'), fullPhotoImg = document.getElementById('fullPhotoImg');
+        let scale = 1, panning = false, pointX = 0, pointY = 0, startX = 0, startY = 0;
+
+        function openFullPhotoModal(index) { fullPhotoImg.src = repairPhotos[index]; fullPhotoModal.style.display = 'flex'; scale = 1; pointX = 0; pointY = 0; fullPhotoImg.style.transform = `translate(0px, 0px) scale(1)`; }
+        function closeFullPhotoModal(e) { if (e && e.target === fullPhotoImg) return; fullPhotoModal.style.display = 'none'; }
+
+        fullPhotoModal.onwheel = (e) => {
+            e.preventDefault(); let delta = e.deltaY || e.detail || e.wheelDelta, zoomFactor = delta > 0 ? 0.85 : 1.15, prevScale = scale;
+            scale *= zoomFactor; scale = Math.max(0.2, Math.min(scale, 10)); let actualScaleChange = scale / prevScale;
+            const rect = fullPhotoImg.getBoundingClientRect(), imgCenterX = rect.left + rect.width / 2, imgCenterY = rect.top + rect.height / 2;
+            pointX -= (e.clientX - imgCenterX) * (actualScaleChange - 1); pointY -= (e.clientY - imgCenterY) * (actualScaleChange - 1);
+            fullPhotoImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+        };
+        fullPhotoModal.onmousedown = (e) => { if(e.target !== fullPhotoImg) return; e.preventDefault(); startX = e.clientX - pointX; startY = e.clientY - pointY; panning = true; };
+        fullPhotoModal.onmouseup = () => panning = false; fullPhotoModal.onmouseleave = () => panning = false;
+        fullPhotoModal.onmousemove = (e) => { if (!panning) return; e.preventDefault(); pointX = e.clientX - startX; pointY = e.clientY - startY; fullPhotoImg.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`; };
+
+        const logoContainer = document.getElementById('logoContainer'), logoUpload = document.getElementById('logoUpload'), logoPreview = document.getElementById('logoPreview'), logoText = document.getElementById('logoPlaceholderText');
+        logoContainer.onclick = () => { logoUpload.click(); };
+        logoUpload.onchange = (event) => {
+            const file = event.target.files[0]; if (file) {
+                const reader = new FileReader(); reader.onload = (e) => { const imageUrl = e.target.result; localStorage.setItem('tfs_custom_logo', imageUrl); logoPreview.src = imageUrl; logoPreview.style.display = 'block'; logoText.style.display = 'none'; }; reader.readAsDataURL(file);
+            }
+        };
+
+        // --- ZMIANA ZAKŁADEK W PODSUMOWANIU ---
+        function goToPodsumowanie() { 
+            document.getElementById('step5_wydruki').style.display = 'none'; 
+            document.getElementById('step6_rozliczenie').style.display = 'none'; 
+            document.getElementById('step4_summary').style.display = 'flex'; 
+        }
+
+        function goToWydruki() {
+            document.getElementById('step4_summary').style.display = 'none'; 
+            document.getElementById('step6_rozliczenie').style.display = 'none'; 
+            document.getElementById('step5_wydruki').style.display = 'flex';
+            
+            let imie = document.getElementById('sum_c_imie').value || '', nazwisko = document.getElementById('sum_c_nazwisko').value || '';
+            document.getElementById('p_wlasciciel').textContent = `${imie} ${nazwisko}`.trim(); document.getElementById('p_podpis_klient').textContent = `${imie} ${nazwisko}`.trim() || 'Podpis właściciela';
+            document.getElementById('p_kontakt').textContent = document.getElementById('sum_c_tel').value; document.getElementById('p_sprzet_nazwa').textContent = document.getElementById('sum_h_nazwa').value; document.getElementById('p_sprzet_sn').textContent = document.getElementById('sum_h_sn').value;
+            let dataP = document.getElementById('sum_data_przyjecia').value; if(dataP) dataP = dataP.replace('T', ' ');
+            document.getElementById('p_data_przyjecia').textContent = dataP; document.getElementById('p_data_ukonczenia').textContent = document.getElementById('sum_data_ukonczenia').value; 
+            document.getElementById('p_opis').textContent = document.getElementById('sum_opis_uszkodzenia').value;
+            document.getElementById('p_opis_naprawy_val').textContent = document.getElementById('sum_opis_naprawy').value;
+            
+            changePrintTemplate();
+        }
+
+        async function goToRozliczenie() {
+            document.getElementById('step4_summary').style.display = 'none';
+            document.getElementById('step5_wydruki').style.display = 'none';
+            document.getElementById('step6_rozliczenie').style.display = 'flex';
+
+            if (globalRepairId) {
+                try {
+                    const wszystkieRozliczenia = await ipcRenderer.invoke('get-rozliczenia') || [];
+                    const powiazane = wszystkieRozliczenia.filter(r => r.id_naprawy == globalRepairId || r.nr_naprawy == globalRepairId);
+
+                    if (powiazane.length > 0) {
+                        // Jest rozliczenie -> Pokaż tabelę w stylu rozliczenia.html
+                        document.getElementById('rozliczenie_brak').style.display = 'none';
+                        document.getElementById('rozliczenie_form').style.display = 'none';
+                        document.getElementById('rozliczenie_tabela').style.display = 'block';
+
+                        const tbody = document.getElementById('rozliczenie_tbody');
+                        tbody.innerHTML = '';
+                        powiazane.forEach(r => {
+                            let isRozliczony = (r.status || '').toLowerCase() === 'rozliczony';
+                            let statusTxt = isRozliczony ? '✅ Rozliczony' : '❔ Nierozliczony';
+                            
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><span class="id-badge">#${r.id}</span></td>
+                                    <td><b>${formatujDateTabela(r.data_dodania)}</b></td>
+                                    <td><b>${formatMoney(r.kwota_netto)}</b></td>
+                                    <td><b>${formatMoney(r.kwota_brutto)}</b></td>
+                                    <td><b>${formatMoney(r.koszt_czesci || r.koszt_części)}</b></td>
+                                    <td><b>${formatMoney(r.koszt_pracy)}</b></td>
+                                    <td><div class="cell-truncate" title="${r.opis || ''}">${r.opis || ''}</div></td>
+                                    <td><strong>${statusTxt}</strong></td>
+                                    <td><b>${formatujDateTabela(r.data_rozliczenia)}</b></td>
+                                    <td><div class="cell-truncate">${r.rozliczyl || ''}</div></td>
+                                    <td><button class="action-btn-gray" onclick="edytujRozliczenieZtabeli(${r.id})" style="padding: 4px 10px; font-size: 12px; margin: 0 auto; display:flex;">✏️ Edytuj</button></td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        // Brak rozliczeń -> Ekran powitalny
+                        globalRozliczenieId = null;
+                        document.getElementById('rozliczenie_brak').style.display = 'block';
+                        document.getElementById('rozliczenie_tabela').style.display = 'none';
+                        document.getElementById('rozliczenie_form').style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error("Błąd ładowania rozliczenia:", e);
+                }
+            }
+        }
+
+        function changePrintTemplate() {
+            const template = document.getElementById('print_template_select').value;
+            const mainTitle = document.getElementById('print_main_title');
+            const opisNaprawyLbl = document.getElementById('p_opis_naprawy_lbl');
+            const opisNaprawyVal = document.getElementById('p_opis_naprawy_val');
+            
+            if (template === 'wydanie') {
+                mainTitle.textContent = "Dowód wydania sprzętu po naprawie";
+                opisNaprawyLbl.style.display = "block";
+                opisNaprawyVal.style.display = "block";
+            } else {
+                mainTitle.textContent = "Dowód przyjęcia sprzętu do naprawy";
+                opisNaprawyLbl.style.display = "none";
+                opisNaprawyVal.style.display = "none";
+            }
+        }
+
+        const inputsToWatch = ['c_nazwisko', 'c_tel', 'h_nazwa', 'r_opis_uszkodzenia'];
+        inputsToWatch.forEach(id => { const el = document.getElementById(id); if(el) { el.oninput = function() { this.classList.remove('input-error'); }; } });
+
+        function initRepairDates() {
+            const now = new Date(), year = now.getFullYear(), month = String(now.getMonth() + 1).padStart(2, '0'), day = String(now.getDate()).padStart(2, '0'), hours = String(now.getHours()).padStart(2, '0'), minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('r_data_przyjecia').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+            const future = new Date(now); future.setDate(future.getDate() + 14);
+            document.getElementById('r_data_ukonczenia').value = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
+        }
+
+        function pobierzIWalidujKlienta() {
+            const inpNazwisko = document.getElementById('c_nazwisko'), inpTel = document.getElementById('c_tel'); let hasError = false;
+            if (!inpNazwisko.value.trim()) { inpNazwisko.classList.add('input-error'); hasError = true; }
+            if (!inpTel.value.trim()) { inpTel.classList.add('input-error'); hasError = true; }
+            if (hasError) return null;
+            return { imie: document.getElementById('c_imie').value, nazwisko: inpNazwisko.value, firma: document.getElementById('c_firma').value, nip: document.getElementById('c_nip').value, ulica: document.getElementById('c_ulica').value, dom: document.getElementById('c_dom').value, lokal: document.getElementById('c_lokal').value, miasto: document.getElementById('c_miasto').value, kod: document.getElementById('c_kod').value, email: document.getElementById('c_mail').value, tel: inpTel.value, email2: document.getElementById('c_mail2').value, tel2: document.getElementById('c_tel2').value, opis: document.getElementById('c_opis').value };
+        }
+
+        async function addClientOnly() {
+            if (blokadaZapisu) return; const nowyKlient = pobierzIWalidujKlienta(); if (!nowyKlient) return; blokadaZapisu = true;
+            try { if (!globalClientId) { await ipcRenderer.invoke('dodaj-klienta', nowyKlient); } else { nowyKlient.id = globalClientId; ipcRenderer.send('edytuj-klienta', nowyKlient); } window.location.href = "klienci.html"; } catch (err) { console.error("Błąd podczas dodawania klienta:", err); blokadaZapisu = false; }
+        }
+
+        function proceedToHardware() {
+            const klientData = pobierzIWalidujKlienta(); if (!klientData) return;
+            let nazwaK = `${klientData.imie} ${klientData.nazwisko}`.trim(); if(!nazwaK) nazwaK = klientData.firma;
+            document.getElementById('h_wlasciciel_display').textContent = nazwaK; document.getElementById('step1_client').style.display = 'none'; document.getElementById('step2_hardware').style.display = 'block';
+        }
+
+        function goBackToClient() { document.getElementById('step2_hardware').style.display = 'none'; document.getElementById('step1_client').style.display = 'block'; }
+        
+        function proceedToRepair() { 
+            const hNazwaInput = document.getElementById('h_nazwa'); 
+            if (!hNazwaInput.value.trim()) { hNazwaInput.classList.add('input-error'); return; } 
+            document.getElementById('step2_hardware').style.display = 'none'; 
+            document.getElementById('step3_repair').style.display = 'block'; 
+            initRepairDates(); 
+        }
+        
+        function goBackToHardware() { document.getElementById('step3_repair').style.display = 'none'; document.getElementById('step2_hardware').style.display = 'block'; }
+
+        async function saveFullRepair() {
+            if (blokadaZapisu) return;
+            const opisUszkodzeniaInput = document.getElementById('r_opis_uszkodzenia'); if (!opisUszkodzeniaInput.value.trim()) { opisUszkodzeniaInput.classList.add('input-error'); return; }
+            const klient = pobierzIWalidujKlienta(); if (!klient) return; blokadaZapisu = true;
+
+            try {
+                if (!globalClientId) { globalClientId = await ipcRenderer.invoke('dodaj-klienta', klient); } else { klient.id = globalClientId; ipcRenderer.send('edytuj-klienta', klient); }
+                let nazwaK = `${klient.imie} ${klient.nazwisko}`.trim(); if(!nazwaK) nazwaK = klient.firma; dodanyWlascicielString = `#${globalClientId} ${nazwaK}`;
+                
+                const nowySprzet = { nazwa: document.getElementById('h_nazwa').value, typ: document.getElementById('h_typ').value, status_magazyn: document.getElementById('h_status').value, data_wydania: "", wartosc: "", sn: document.getElementById('h_sn').value, stan: document.getElementById('h_stan').value, bateria: document.getElementById('h_bateria').value, zasilacz: document.getElementById('h_zasilacz').value, gwarancja: document.getElementById('h_gwarancja').value, inne: document.getElementById('h_inne').value, wlasciciel: dodanyWlascicielString };
+                globalHardwareId = await ipcRenderer.invoke('dodaj-sprzet', nowySprzet);
+                
+                const nowaNaprawa = { status: document.getElementById('r_status_poczatkowy').value, data_przyjecia: document.getElementById('r_data_przyjecia').value, data_ukonczenia: document.getElementById('r_data_ukonczenia').value, typ: document.getElementById('r_typ_naprawy').value, koszt: document.getElementById('r_przewidywany_koszt').value, opis_uszkodzenia: document.getElementById('r_opis_uszkodzenia').value, opis_naprawy: document.getElementById('r_opis_naprawy').value, komentarz: document.getElementById('r_komentarz').value, id_klienta: globalClientId, id_sprzetu: globalHardwareId, zdjecia: JSON.stringify(repairPhotos) };
+                globalRepairId = await ipcRenderer.invoke('dodaj-naprawe', nowaNaprawa);
+
+                document.getElementById('sum_c_imie').value = document.getElementById('c_imie').value; document.getElementById('sum_c_nazwisko').value = document.getElementById('c_nazwisko').value; document.getElementById('sum_c_mail').value = document.getElementById('c_mail').value; document.getElementById('sum_c_tel').value = document.getElementById('c_tel').value;
+                document.getElementById('sum_status_naprawy').value = document.getElementById('r_status_poczatkowy').value; document.getElementById('sum_data_przyjecia').value = document.getElementById('r_data_przyjecia').value; document.getElementById('sum_data_ukonczenia').value = document.getElementById('r_data_ukonczenia').value; document.getElementById('sum_typ_naprawy').value = document.getElementById('r_typ_naprawy').value; document.getElementById('sum_koszt').value = document.getElementById('r_przewidywany_koszt').value; document.getElementById('sum_opis_uszkodzenia').value = document.getElementById('r_opis_uszkodzenia').value; document.getElementById('sum_opis_naprawy').value = document.getElementById('r_opis_naprawy').value; document.getElementById('sum_komentarz').value = document.getElementById('r_komentarz').value;
+                document.getElementById('sum_h_nazwa').value = document.getElementById('h_nazwa').value; document.getElementById('sum_h_typ').value = document.getElementById('h_typ').value; document.getElementById('sum_h_sn').value = document.getElementById('h_sn').value; document.getElementById('sum_h_stan').value = document.getElementById('h_stan').value; document.getElementById('sum_h_bateria').value = document.getElementById('h_bateria').value; document.getElementById('sum_h_zasilacz').value = document.getElementById('h_zasilacz').value; document.getElementById('sum_h_gwarancja').value = document.getElementById('h_gwarancja').value; document.getElementById('sum_h_inne').value = document.getElementById('h_inne').value; document.getElementById('sum_h_magazyn').value = document.getElementById('h_status').value;
+                
+                updatePhotoPreview(); isEditing = false; document.getElementById('btn_edit_save').innerHTML = '✏️ <span>Edytuj</span>'; document.getElementById('btn_sum_dodaj_zdjecia').style.display = 'none'; 
+                const sumFields = document.getElementById('step4_summary').querySelectorAll('input, select, textarea'); sumFields.forEach(el => el.disabled = true);
+                
+                document.getElementById('step3_repair').style.display = 'none'; 
+                document.getElementById('step4_summary').style.display = 'flex';
+            } catch (error) { console.error("Błąd podczas zapisywania:", error); blokadaZapisu = false; }
+        }
+
+        function toggleEditSave() {
+            const sumWrapper = document.getElementById('step4_summary'), inputs = sumWrapper.querySelectorAll('input, select, textarea'), btn = document.getElementById('btn_edit_save'), btnDodajZdjecia = document.getElementById('btn_sum_dodaj_zdjecia');
+            if (!isEditing) { isEditing = true; inputs.forEach(el => el.disabled = false); btn.innerHTML = '💾 <span>Zapisz</span>'; if (btnDodajZdjecia) btnDodajZdjecia.style.display = 'block'; } 
+            else {
+                isEditing = false; inputs.forEach(el => el.disabled = true); btn.innerHTML = '✏️ <span>Edytuj</span>'; if (btnDodajZdjecia) btnDodajZdjecia.style.display = 'none'; 
+                
+                let noweImie = document.getElementById('sum_c_imie').value.trim(), noweNazwisko = document.getElementById('sum_c_nazwisko').value.trim(), nowaNazwaK = `${noweImie} ${noweNazwisko}`.trim(); if(!nowaNazwaK) nowaNazwaK = "Klient"; 
+                
+                const zedytowanyKlient = { id: globalClientId, imie: document.getElementById('sum_c_imie').value, nazwisko: document.getElementById('sum_c_nazwisko').value, email: document.getElementById('sum_c_mail').value, tel: document.getElementById('sum_c_tel').value };
+                const zedytowanySprzet = { id: globalHardwareId, nazwa: document.getElementById('sum_h_nazwa').value, typ: document.getElementById('sum_h_typ').value, sn: document.getElementById('sum_h_sn').value, stan: document.getElementById('sum_h_stan').value, bateria: document.getElementById('sum_h_bateria').value, zasilacz: document.getElementById('sum_h_zasilacz').value, gwarancja: document.getElementById('sum_h_gwarancja').value, inne: document.getElementById('sum_h_inne').value, status_magazyn: document.getElementById('sum_h_magazyn').value, wlasciciel: `#${globalClientId} ${nowaNazwaK}` };
+                const zedytowanaNaprawa = { id: globalRepairId, status: document.getElementById('sum_status_naprawy').value, data_przyjecia: document.getElementById('sum_data_przyjecia').value, data_ukonczenia: document.getElementById('sum_data_ukonczenia').value, typ: document.getElementById('sum_typ_naprawy').value, koszt: document.getElementById('sum_koszt').value, opis_uszkodzenia: document.getElementById('sum_opis_uszkodzenia').value, opis_naprawy: document.getElementById('sum_opis_naprawy').value, komentarz: document.getElementById('sum_komentarz').value, zdjecia: JSON.stringify(repairPhotos) };
+                
+                if (globalClientId) ipcRenderer.send('edytuj-klienta', zedytowanyKlient); if (globalHardwareId) ipcRenderer.send('edytuj-sprzet', zedytowanySprzet); if (globalRepairId) ipcRenderer.send('edytuj-naprawe', zedytowanaNaprawa);
+            }
+        }
+
+        // --- FUNKCJE ROZLICZENIA ---
+        function pokazFormularzRozliczenia() {
+            document.getElementById('rozliczenie_brak').style.display = 'none';
+            document.getElementById('rozliczenie_tabela').style.display = 'none';
+            document.getElementById('rozliczenie_form').style.display = 'block';
+            
+            // Jesli to jest nowe rozliczenie - wstawiamy domyslną kwotę brutto z podsumowania
+            if (!globalRozliczenieId) {
+                const koszt = document.getElementById('sum_koszt').value;
+                if (koszt) {
+                    document.getElementById('b_kwota_brutto').value = koszt;
+                    let num = parseFloat(String(koszt).replace(',', '.').replace(/[^\d.-]/g, ''));
+                    if(!isNaN(num)) {
+                        document.getElementById('b_kwota_netto').value = (num / 1.23).toFixed(2).replace('.', ',');
+                    }
+                }
+                document.getElementById('btn_zapisz_rozliczenie_txt').textContent = "Utwórz rozliczenie";
+                document.getElementById('btn_anuluj_rozliczenie').style.display = 'none';
+            }
+        }
+
+        async function edytujRozliczenieZtabeli(idRozliczenia) {
+            try {
+                const wszystkieRozliczenia = await ipcRenderer.invoke('get-rozliczenia') || [];
+                const znalezione = wszystkieRozliczenia.find(r => r.id == idRozliczenia);
+                
+                if (znalezione) {
+                    globalRozliczenieId = znalezione.id;
+                    document.getElementById('b_kwota_netto').value = znalezione.kwota_netto || '';
+                    document.getElementById('b_kwota_brutto').value = znalezione.kwota_brutto || '';
+                    document.getElementById('b_koszt_czesci').value = znalezione.koszt_czesci || znalezione.koszt_części || '';
+                    document.getElementById('b_koszt_pracy').value = znalezione.koszt_pracy || '';
+                    document.getElementById('b_koszt_zewnetrzny').value = znalezione.koszt_zewnetrzny || '';
+                    document.getElementById('b_opis').value = znalezione.opis || '';
+                    
+                    if ((znalezione.status || '').toLowerCase() === 'rozliczony') {
+                        document.querySelector('input[name="b_status"][value="Rozliczony"]').checked = true;
+                    } else {
+                        document.querySelector('input[name="b_status"][value="Nierozliczony"]').checked = true;
+                    }
+
+                    document.getElementById('rozliczenie_tabela').style.display = 'none';
+                    document.getElementById('rozliczenie_form').style.display = 'block';
+                    document.getElementById('btn_zapisz_rozliczenie_txt').textContent = "Zapisz zmiany";
+                    document.getElementById('btn_anuluj_rozliczenie').style.display = 'flex';
+                }
+            } catch (err) {
+                console.error("Błąd otwierania edycji rozliczenia:", err);
+            }
+        }
+
+        function anulujEdycjeRozliczenia() {
+            // Wracamy do tabeli
+            goToRozliczenie();
+        }
+
+        function przeliczKwoty(zmienionyInput) {
+            let val = zmienionyInput.value.replace(',', '.').replace(/[^\d.-]/g, '');
+            let num = parseFloat(val);
+            if(isNaN(num)) return;
+
+            if(zmienionyInput.id === 'b_kwota_netto') {
+                let brutto = num * 1.23;
+                document.getElementById('b_kwota_brutto').value = brutto.toFixed(2).replace('.', ',');
+            } else if (zmienionyInput.id === 'b_kwota_brutto') {
+                let netto = num / 1.23;
+                document.getElementById('b_kwota_netto').value = netto.toFixed(2).replace('.', ',');
+            }
+        }
+
+        async function zapiszRozliczenieTab() {
+            if (!globalRepairId || !globalClientId || !globalHardwareId) return;
+
+            const statusWybrany = document.querySelector('input[name="b_status"]:checked').value;
+            const dzisiaj = new Date();
+            const dataDodania = `${dzisiaj.getFullYear()}-${String(dzisiaj.getMonth()+1).padStart(2,'0')}-${String(dzisiaj.getDate()).padStart(2,'0')}`;
+            const dataRozliczenia = statusWybrany === 'Rozliczony' ? dataDodania : '';
+
+            const dane = {
+                id_klienta: globalClientId,
+                id_naprawy: globalRepairId,
+                id_sprzetu: globalHardwareId,
+                kwota_netto: document.getElementById('b_kwota_netto').value,
+                kwota_brutto: document.getElementById('b_kwota_brutto').value,
+                koszt_czesci: document.getElementById('b_koszt_czesci').value,
+                koszt_pracy: document.getElementById('b_koszt_pracy').value,
+                koszt_zewnetrzny: document.getElementById('b_koszt_zewnetrzny').value,
+                opis: document.getElementById('b_opis').value,
+                status: statusWybrany,
+                data_dodania: dataDodania,
+                data_rozliczenia: dataRozliczenia
+            };
+
+            try {
+                if (globalRozliczenieId) {
+                    dane.id = globalRozliczenieId;
+                    ipcRenderer.send('edytuj-rozliczenie', dane);
+                } else {
+                    globalRozliczenieId = await ipcRenderer.invoke('dodaj-rozliczenie', dane);
+                }
+                
+                // Po udanym zapisie - odświeżamy tabele i chowamy formularz
+                await goToRozliczenie();
+
+            } catch (err) {
+                console.error("Błąd zapisu rozliczenia:", err);
+            }
+        }
+
+        window.onload = async () => {
+            const savedLogo = localStorage.getItem('tfs_custom_logo'); if (savedLogo) { logoPreview.src = savedLogo; logoPreview.style.display = 'block'; logoText.style.display = 'none'; }
+            await zaladujStatystyki();
+            
+            try {
+                allClientsList = await ipcRenderer.invoke('get-klienci') || [];
+                ['c_imie', 'c_nazwisko', 'c_firma', 'c_nip', 'c_ulica', 'c_dom', 'c_lokal', 'c_miasto', 'c_kod', 'c_mail', 'c_tel', 'c_mail2', 'c_tel2'].forEach(id => { const el = document.getElementById(id); if(el) { el.oninput = function() { handleMainFieldInput(); showClientSuggestions(this, this.value); }; } });
+            } catch (error) { console.error("Błąd ładowania listy klientów do wyszukiwania:", error); }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const repairId = urlParams.get('id');
+            const step = urlParams.get('krok');
+            const incomingClientId = urlParams.get('klient_id'); 
+
+            if (incomingClientId && allClientsList.length > 0) {
+                const klient = allClientsList.find(c => c.id == incomingClientId);
+                if (klient) {
+                    fillClientForm(klient); 
+                    
+                    if (step === '2') {
+                        proceedToHardware(); 
+                    } else if (step === '3') {
+                        proceedToHardware();
+                        document.getElementById('h_nazwa').value = "Brak podanego sprzętu";
+                        proceedToRepair();
+                    }
+                }
+            }
+
+            if (step === '4') { document.getElementById('step1_client').style.display = 'none'; document.getElementById('step2_hardware').style.display = 'none'; document.getElementById('step3_repair').style.display = 'none'; document.getElementById('step5_wydruki').style.display = 'none'; document.getElementById('step6_rozliczenie').style.display = 'none'; document.getElementById('step4_summary').style.display = 'flex'; }
+            
+            if (repairId) {
+                try {
+                    let naprawa = null; try { naprawa = await ipcRenderer.invoke('get-naprawa-szczegoly', repairId); } catch(e) {}
+                    if (!naprawa) {
+                        const wszystkieNaprawy = await ipcRenderer.invoke('get-naprawy').catch(() => []); naprawa = wszystkieNaprawy.find(n => n.id == repairId);
+                        if (naprawa) {
+                            if (naprawa.id_klienta) { const wszyscyKlienci = await ipcRenderer.invoke('get-klienci').catch(() => []); const klient = wszyscyKlienci.find(k => k.id == naprawa.id_klienta); if (klient) { naprawa.klient_imie = klient.imie; naprawa.klient_nazwisko = klient.nazwisko; naprawa.klient_email = klient.email || klient.mail; naprawa.klient_tel = klient.tel; naprawa.klient_firma = klient.firma; } }
+                            if (naprawa.id_sprzetu) { const calySprzet = await ipcRenderer.invoke('get-sprzet').catch(() => []); const sprzet = calySprzet.find(s => s.id == naprawa.id_sprzetu); if (sprzet) { naprawa.sprzet_nazwa = sprzet.nazwa; naprawa.sprzet_typ = sprzet.typ; naprawa.sprzet_sn = sprzet.sn; naprawa.sprzet_stan = sprzet.stan; naprawa.sprzet_bateria = sprzet.bateria; naprawa.sprzet_zasilacz = sprzet.zasilacz; naprawa.sprzet_gwarancja = sprzet.gwarancja; naprawa.sprzet_inne = sprzet.inne; naprawa.sprzet_status_magazyn = sprzet.status_magazyn || sprzet.magazyn; } }
+                        }
+                    }
+                    if (naprawa) {
+                        globalRepairId = repairId; globalClientId = naprawa.id_klienta || ''; globalHardwareId = naprawa.id_sprzetu || '';
+                        document.getElementById('sum_c_imie').value = naprawa.klient_imie || naprawa.klient || ''; document.getElementById('sum_c_nazwisko').value = naprawa.klient_nazwisko || ''; document.getElementById('sum_c_mail').value = naprawa.klient_email || ''; document.getElementById('sum_c_tel').value = naprawa.klient_tel || '';
+                        document.getElementById('sum_status_naprawy').value = naprawa.status || '⬜ [Otwarta] Nowa naprawa'; document.getElementById('sum_data_przyjecia').value = naprawa.data_przyjecia || naprawa.data_dodania || ''; document.getElementById('sum_data_ukonczenia').value = naprawa.data_ukonczenia || naprawa.ukonczenie || ''; document.getElementById('sum_typ_naprawy').value = naprawa.typ || naprawa.rodzaj || ''; document.getElementById('sum_koszt').value = naprawa.koszt || naprawa.koszt_naprawy || ''; document.getElementById('sum_opis_uszkodzenia').value = naprawa.opis_uszkodzenia || ''; document.getElementById('sum_opis_naprawy').value = naprawa.opis_naprawy || ''; document.getElementById('sum_komentarz').value = naprawa.komentarz || '';
+                        document.getElementById('sum_h_nazwa').value = naprawa.sprzet_nazwa || naprawa.sprzet || ''; document.getElementById('sum_h_typ').value = naprawa.sprzet_typ || ''; document.getElementById('sum_h_sn').value = naprawa.sprzet_sn || ''; document.getElementById('sum_h_stan').value = naprawa.sprzet_stan || ''; document.getElementById('sum_h_bateria').value = naprawa.sprzet_bateria || ''; document.getElementById('sum_h_zasilacz').value = naprawa.sprzet_zasilacz || ''; document.getElementById('sum_h_gwarancja').value = naprawa.sprzet_gwarancja || ''; document.getElementById('sum_h_inne').value = naprawa.sprzet_inne || ''; document.getElementById('sum_h_magazyn').value = naprawa.sprzet_status_magazyn || naprawa.status || '';
+                        if (naprawa.zdjecia) { try { repairPhotos = JSON.parse(naprawa.zdjecia); updatePhotoPreview(); } catch(err) {} }
+                        const sumFields = document.getElementById('step4_summary').querySelectorAll('input, select, textarea'); sumFields.forEach(el => el.disabled = true); isEditing = false; document.getElementById('btn_sum_dodaj_zdjecia').style.display = 'none';
+                    }
+                } catch (error) { console.error("Krytyczny błąd pobierania danych z bazy:", error); }
+            }
+        };
+    </script>
+</body>
+</html>

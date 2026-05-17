@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>tfs.serwis</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; height: 100vh; overflow: hidden; }
+        .main-wrapper { display: flex; height: 100vh; width: 100%; }
+        .content-left { flex: 1; position: relative; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+        .main-logo-container { position: absolute; top: 5px; left: 40px; z-index: 20; }
+        .main-logo-container img { width: 200px; height: 100px; object-fit: contain; }
+        
+        .stats-bar { position: absolute; top: 20px; left: 310px; right: 20px; display: flex; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; height: 60px; align-items: stretch; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; position: relative; flex-grow: 1; cursor: pointer; transition: background-color 0.2s; }
+        .stat-box:hover { background-color: #e4e4e4; }
+        .stat-box::after { content: ""; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background-color: #bbb; }
+        .stat-box:last-child::after { display: none; }
+        .stat-label { font-size: 16px !important; color: #444; margin-bottom: 2px; }
+        .stat-number { font-size: 30px !important; font-weight: bold; color: #000; }
+        
+        #view-list { width: 100%; height: 100vh; padding: 110px 20px 30px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
+        .top-module-nav { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-shrink: 0; }
+        .module-btn { width: 55px; height: 55px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); border: 1px solid #a9a9a9; border-radius: 6px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: all 0.2s; cursor: pointer; }
+        .module-btn img { width: 32px; height: 32px; object-fit: contain; }
+        .module-btn:hover:not(.active) { background: linear-gradient(to bottom, #f4f4f4, #d5d5d5); transform: translateY(-1px); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .module-btn.active { background: #d0d0d0; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); border-color: #888; cursor: default; }
+        
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: auto; flex-grow: 1; max-height: 40vh; margin-bottom: 30px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1500px; }
+        thead th { background-color: #34495e; color: white; padding: 12px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid #455a64; position: sticky; top: 0; z-index: 10; }
+        tbody tr { border-bottom: 1.5px solid #e0e0e0; transition: 0.1s; cursor: pointer; }
+        tbody tr:hover { background-color: #f9f9f9; }
+        tbody tr.selected { background-color: #d0e8f2 !important; }
+        td { padding: 10px; font-size: 13px; color: #2c3e50; border-right: 1px solid #f0f0f0; text-align: center; vertical-align: middle; }
+        td:last-child { border-right: none; }
+        .id-badge { background: #f0f0f0; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: #333; display: inline-block; }
+        .client-name { font-weight: bold; display: block; }
+        
+        .control-panel { background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; padding: 25px 20px; display: flex; gap: 20px; box-shadow: inset 0 1px 3px rgba(255,255,255,0.5); margin-top: auto; flex-shrink: 0; }
+        .form-fields { flex-grow: 1; display: grid; grid-template-columns: max-content 1fr max-content 1fr max-content 1fr; gap: 15px 20px; align-items: center; }
+        .form-fields label { font-size: 13px; color: #000; text-align: right; }
+        .form-fields input { padding: 6px 8px; border: 1px solid #a9a9a9; border-radius: 2px; font-size: 13px; width: 100%; box-sizing: border-box; }
+        .form-divider { grid-column: 1 / -1; border-bottom: 1px solid #ccc; margin: 10px 0; }
+        
+        .form-buttons { display: flex; flex-direction: column; gap: 35px; min-width: 150px; justify-content: center; }
+        .form-buttons button { padding: 10px 10px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); color: #000; transition: all 0.2s; }
+        .form-buttons button:hover { background: linear-gradient(to bottom, #f0f0f0, #d0d0d0); }
+        .btn-icon { font-size: 16px; transition: all 0.2s; }
+        #btn_dodaj .btn-icon { color: #4CAF50; }
+        #btn_wybierz .btn-icon { color: #2196F3; }
+        #btn_usun .btn-icon { color: #F44336; }
+        .btn-disabled { cursor: not-allowed !important; color: #777 !important; }
+        .btn-disabled .btn-icon { filter: grayscale(100%) opacity(40%); }
+        
+        #view-details { display: none; width: 100%; height: 100vh; padding: 15vh 40px 40px 40px; box-sizing: border-box; background-color: #f0f0f0; overflow-y: auto; }
+        .det-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; }
+        .det-header-left { display: flex; align-items: center; gap: 15px; font-weight: bold; font-size: 16px; }
+        .det-btn-back { background: linear-gradient(to bottom, #ffffff, #e0e0e0); border: 1px solid #a9a9a9; color: #333; border-radius: 4px; padding: 6px 15px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; gap: 8px; }
+        .det-btn-back:hover { background: linear-gradient(to bottom, #f4f4f4, #d5d5d5); transform: translateY(-1px); }
+        
+        .det-top-buttons, .det-sub-buttons { display: flex; gap: 10px; }
+        .det-top-buttons button, .det-sub-buttons button { padding: 8px 15px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .det-top-buttons button:hover { background: linear-gradient(to bottom, #f4f4f4, #d5d5d5); }
+        .det-top-buttons button.active { background: #d0d0d0; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); border-color: #888; cursor: default; }
+        
+        .det-sub-row { display: flex; justify-content: flex-end; margin-bottom: 30px; }
+        .det-title { font-weight: bold; margin-bottom: 15px; font-size: 14px; }
+        .det-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1000px; }
+        .det-group { display: grid; grid-template-columns: max-content 1fr; gap: 10px 15px; align-items: center; }
+        .det-group label { text-align: right; font-size: 13px; }
+        .det-group input, .det-group textarea, .det-opis-container textarea { padding: 6px; border: 1px solid #a9a9a9; border-radius: 2px; width: 100%; font-size: 13px; box-sizing: border-box; background-color: #f8f8f8; color: #333; }
+        .det-group input:not([readonly]), .det-group textarea:not([readonly]), .det-opis-container textarea:not([readonly]) { background-color: #fffbdd; color: #000; }
+        .det-inline-group { display: flex; align-items: center; gap: 10px; }
+        .det-inline-group input { width: 80px; }
+        .det-opis-container { grid-column: 1 / -1; margin-top: 20px; display: grid; grid-template-columns: max-content 1fr; gap: 15px; }
+        .det-opis-container textarea { height: 200px; resize: vertical; }
+        .det-spacer { height: 20px; grid-column: 1 / -1; }
+        
+        .sidebar-right { width: 240px; background-color: #f0f0f0; border-left: 1px solid #ccc; padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100vh; box-sizing: border-box; }
+        .side-btn { background: #f8f8f8 !important; border: 1px solid #999; border-radius: 4px; cursor: pointer; display: flex; align-items: center; font-weight: bold; transition: all 0.2s ease; text-decoration: none; color: black; width: 100%; min-height: 80px; padding: 0 20px; font-size: 15px; justify-content: flex-start; }
+        .side-btn img { width: 40px; height: 40px; object-fit: contain; margin-right: 25px; }
+        .side-btn:hover { background: #ffffff !important; transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .sidebar-spacer { flex-grow: 1; }
+
+        /* --- STYLE DLA TOOLTIPA I UCINANIA TEKSTU --- */
+        .cell-truncate {
+            display: block;
+            max-width: 110px;
+            margin: 0 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
+        #custom-tooltip {
+            position: fixed;
+            display: none;
+            background: #222;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 100000;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            border: 1px solid #555;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="content-left">
+        <div class="main-logo-container">
+            <img src="img/logo-tfs.serwis.png" alt="Logo Serwisu">
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-box" onclick="window.location.href='naprawy_w_trakcie.html'" title="Pokaż naprawy w trakcie">
+                <span class="stat-label">Naprawy w trakcie</span>
+                <span class="stat-number" id="stat_w_trakcie">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_wygasajace.html'" title="Pokaż wygasające naprawy">
+                <span class="stat-label">Naprawy wygasające</span>
+                <span class="stat-number" id="stat_wygasajace">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_po_terminie.html'" title="Pokaż naprawy po terminie">
+                <span class="stat-label">Naprawy po terminie</span>
+                <span class="stat-number" id="stat_po_terminie">0</span>
+            </div>
+        </div>
+
+        <div id="view-list">
+            <div class="top-module-nav">
+                <a href="naprawy.html" class="module-btn" title="Naprawy"><img src="img/ikonka-naprawy.png" alt="Naprawy"></a>
+                <a href="sprzęt.html" class="module-btn" title="Sprzęt"><img src="img/ikonka-sprzęt.png" alt="Sprzęt"></a>
+                <a href="klienci.html" class="module-btn active" title="Klienci"><img src="img/ikonka-klienci.png" alt="Klienci"></a>
+                <a href="rozliczenia.html" class="module-btn" title="Rozliczenia"><img src="img/ikonka-rozliczenia.png" alt="Rozliczenia"></a>
+            </div>
+
+            <div class="table-container">
+                <table id="clientsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Imię</th><th>Nazwisko</th><th>Firma</th><th>NIP</th>
+                            <th>Ulica</th><th>Nr budynku</th><th>Nr lokalu</th><th>Miasto</th>
+                            <th>Kod</th><th>E-mail</th><th>E-mail 2</th><th>Telefon</th><th>Telefon 2</th><th>Opis</th>
+                        </tr>
+                    </thead>
+                    <tbody id="clientsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="control-panel">
+                <div class="form-fields">
+                    <label>Numer klienta:</label> <input type="text" id="inp_nr_klienta" placeholder="np. do wyszukiwania">
+                    <label>Nazwisko:</label> <input type="text" id="inp_nazwisko">
+                    <label>Imię:</label> <input type="text" id="inp_imie">
+                    <div class="form-divider"></div>
+                    <label>Firma:</label> <input type="text" id="inp_firma">
+                    <label>NIP:</label> <input type="text" id="inp_nip">
+                    <label>E-mail:</label> <input type="text" id="inp_email">
+                    <label>Ulica:</label> <input type="text" id="inp_ulica">
+                    <label>Nr domu:</label> <input type="text" id="inp_nr_domu">
+                    <label>E-mail 2:</label> <input type="text" id="inp_email2">
+                    <label>Miasto:</label> <input type="text" id="inp_miasto">
+                    <label>Numer lokalu:</label> <input type="text" id="inp_nr_lokalu">
+                    <label>Telefon:</label> <input type="text" id="inp_telefon">
+                    <label>Kod:</label> <input type="text" id="inp_kod">
+                    <span></span><span></span>
+                    <label>Telefon 2:</label> <input type="text" id="inp_telefon2">
+                </div>
+                <div class="form-buttons">
+                    <button id="btn_dodaj"><span class="btn-icon">✚</span> Dodaj</button>
+                    <button id="btn_wybierz" class="btn-disabled"><span class="btn-icon">📄</span> Wybierz</button>
+                    <button id="btn_usun" class="btn-disabled"><span class="btn-icon">✖</span> Usuń</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-details">
+            <div class="det-header">
+                <div class="det-header-left">
+                    <button class="det-btn-back" id="btn_wstecz" title="Wróć do poprzedniego widoku"><span>⬅</span> Wstecz</button>
+                    <span style="margin-left: 10px;">👥 Klient: <span id="det_header_title">--</span></span>
+                </div>
+                <div class="det-top-buttons">
+                    <button id="btn_tab_dane" class="active">✏️ Dane</button>
+                    <button id="btn_tab_naprawy">🔧 Naprawy</button>
+                    <button id="btn_tab_rozliczenia">🧾 Rozliczenia</button>
+                </div>
+            </div>
+
+            <div id="tab_content_dane">
+                <div class="det-sub-row" id="det_sub_row_dane">
+                    <div class="det-sub-buttons">
+                        <button id="btn_det_edytuj">✏️ Edytuj dane</button>
+                        <button id="btn_det_zapisz" style="display: none;">💾 Zapisz</button>
+                        <button id="btn_det_anuluj" style="display: none;">❌ Anuluj</button>
+                    </div>
+                </div>
+
+                <div class="det-title">Dane klienta</div>
+                <div class="det-grid">
+                    <div class="det-group">
+                        <label>Nazwisko:</label> <input type="text" id="det_nazwisko" readonly>
+                        <label>Imię:</label> <input type="text" id="det_imie" readonly>
+                        <label>Ulica:</label> <input type="text" id="det_ulica" readonly>
+                        <label>Miasto:</label> <input type="text" id="det_miasto" readonly>
+                    </div>
+                    <div class="det-group">
+                        <label>Firma:</label> <input type="text" id="det_firma" readonly>
+                        <label>NIP:</label> <input type="text" id="det_nip" readonly style="width: 150px;">
+                        <label>Nr domu:</label>
+                        <div class="det-inline-group"><input type="text" id="det_nr_domu" readonly><label style="margin-left:10px;">Nr lokalu:</label><input type="text" id="det_nr_lokalu" readonly></div>
+                        <label>Kod :</label> <input type="text" id="det_kod" readonly style="width: 80px;">
+                    </div>
+                    <div class="det-spacer"></div>
+                    <div class="det-group">
+                        <label>E-mail:</label> <input type="text" id="det_email" readonly>
+                        <label>E-mail 2:</label> <input type="text" id="det_email2" readonly>
+                    </div>
+                    <div class="det-group">
+                        <label>Telefon:</label> <input type="text" id="det_telefon" readonly style="width: 150px;">
+                        <label>Telefon 2:</label> <input type="text" id="det_telefon2" readonly style="width: 150px;">
+                    </div>
+                    <div class="det-opis-container">
+                        <label>Opis:</label><textarea id="det_opis" readonly></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab_content_naprawy" style="display: none;">
+                <div class="det-title" style="margin-top: 10px;">Historia napraw klienta</div>
+                
+                <div style="margin-bottom: 20px; display: flex; gap: 20px; align-items: center; background: #fff; padding: 15px; border: 1px solid #ccc; border-radius: 5px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-size:13px; font-weight:bold;">Wybrany Klient:</label>
+                        <input type="text" id="det_naprawy_szukaj_klient" readonly style="padding: 6px 10px; border: 1px solid #a9a9a9; background: #e9e9e9; width: 350px; font-size: 13px;" title="Wyszukiwanie zablokowane dla tej karty klienta">
+                    </div>
+                </div>
+                
+                <div class="table-container" style="max-height: 50vh; height: 50vh; border: 1px solid #ccc; box-shadow: none; overflow: auto; margin-bottom: 15px;">
+                    <table style="min-width: 2000px; width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Data dodania</th>
+                                <th>Ukończenie</th>
+                                <th>Rodzaj</th>
+                                <th>Koszt naprawy</th>
+                                <th>Koszt materiałów</th>
+                                <th>Opis uszkodzenia</th>
+                                <th>Opis naprawy</th>
+                                <th>Komentarz</th>
+                                <th>Status</th>
+                                <th>Sprzęt</th>
+                                <th>Obsługujący</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detRepairsBody"></tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 15px; margin-bottom: 20px;">
+                    <button id="btn_dodaj_naprawe_klienta" style="padding: 10px 15px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                        <span style="color:#4CAF50; font-size: 16px;">✚</span> Dodaj naprawę dla klienta
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="sidebar-right">
+        <a href="index.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-home.png"> <span>Home</span></button></a>
+        <a href="sprzęt.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-sprzęt.png"> <span>Sprzęt</span></button></a>
+        <a href="klienci.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-klienci.png"> <span>Klienci</span></button></a>
+        <a href="naprawy.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-naprawy.png"> <span>Naprawy</span></button></a>
+        <div class="sidebar-spacer"></div>
+        <a href="rozliczenia.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-rozliczenia.png"> <span>Rozliczenia</span></button></a>
+        <button class="side-btn"><img src="img/ikonka-statystyki.png"> <span>Statystyki</span></button>
+        <button class="side-btn"><img src="img/ikonka-konfiguracja.png"> <span>Konfiguracja</span></button>
+        <button class="side-btn"><img src="img/ikonka-wyloguj.png"> <span>Wyloguj</span></button>
+    </div>
+</div>
+
+<div id="custom-tooltip"></div>
+
+<script>
+    const { ipcRenderer } = require('electron');
+
+    const tbody = document.getElementById('clientsBody');
+    let wybranyKlientId = null;
+    let wszyscyKlienci = [];
+    let oryginalneDaneKlienta = null;
+    let aktualnyKlientNaprawy = [];
+
+    const btnWybierz = document.getElementById('btn_wybierz');
+    const btnUsun = document.getElementById('btn_usun');
+
+    const detMap = { 'det_nazwisko': 'nazwisko', 'det_imie': 'imie', 'det_ulica': 'ulica', 'det_miasto': 'miasto', 'det_firma': 'firma', 'det_nip': 'nip', 'det_nr_domu': 'dom', 'det_nr_lokalu': 'lokal', 'det_kod': 'kod', 'det_email': 'email', 'det_email2': 'email2', 'det_telefon': 'tel', 'det_telefon2': 'tel2', 'det_opis': 'opis' };
+
+    // --- LOGIKA TOOLTIPA ---
+    const tooltip = document.getElementById('custom-tooltip');
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('.cell-truncate');
+        if (target && target.scrollWidth > target.clientWidth) {
+            tooltip.textContent = target.textContent;
+            tooltip.style.display = 'block';
+        }
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (tooltip.style.display === 'block') {
+            let left = e.clientX + 15;
+            let top = e.clientY + 15;
+            if (left + tooltip.offsetWidth > window.innerWidth) left = e.clientX - tooltip.offsetWidth - 15;
+            if (top + tooltip.offsetHeight > window.innerHeight) top = e.clientY - tooltip.offsetHeight - 15;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+    });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.cell-truncate')) {
+            tooltip.style.display = 'none';
+        }
+    });
+    // -----------------------
+
+    function formatujDateTabela(dataStr) {
+        if (!dataStr) return '';
+        if (dataStr.includes('T')) dataStr = dataStr.split('T')[0];
+        const p = dataStr.split('-');
+        if (p.length === 3) { if (p[0].length === 4) return `${p[2]}-${p[1]}-${p[0]}`; return `${p[0]}-${p[1]}-${p[2]}`; }
+        return dataStr;
+    }
+
+    function parseDateForSort(dateStr) {
+        if (!dateStr) return null;
+        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0];
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`;
+            if (parts[0].length === 4) return dateStr;
+        }
+        return dateStr;
+    }
+
+    async function zaladujStatystyki() {
+        try {
+            const pobrane = await ipcRenderer.invoke('get-naprawy') || [];
+            let wTrakcie = 0, poTerminie = 0, wygasajace = 0;
+            const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+            const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+            pobrane.forEach(n => {
+                const status = (n.status || '').toLowerCase();
+                if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                    let dataU = n.ukonczenie || n.data_ukonczenia;
+                    let isPoTerminie = false;
+
+                    if (dataU) {
+                        let normalnaData = parseDateForSort(dataU);
+                        if (normalnaData) {
+                            let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                            if (termin < dzisiaj) { poTerminie++; isPoTerminie = true; }
+                            else if (termin >= dzisiaj && termin <= za4Dni) { wygasajace++; }
+                        }
+                    }
+                    if (!isPoTerminie) { wTrakcie++; }
+                }
+            });
+
+            document.getElementById('stat_w_trakcie').textContent = wTrakcie;
+            document.getElementById('stat_wygasajace').textContent = wygasajace;
+            document.getElementById('stat_po_terminie').textContent = poTerminie;
+        } catch(e) { console.error("Błąd ładowania statystyk:", e); }
+    }
+
+    function zresetujPrzyciskiAukcji() {
+        wybranyKlientId = null;
+        btnWybierz.classList.add('btn-disabled');
+        btnUsun.classList.add('btn-disabled');
+    }
+
+    async function odswiezTabele() {
+        try {
+            await zaladujStatystyki();
+            wszyscyKlienci = await ipcRenderer.invoke('get-klienci');
+            renderujTabele(wszyscyKlienci);
+        } catch (error) { console.error("Błąd ładowania klientów:", error); }
+    }
+
+    function renderujTabele(klienciDoWyswietlenia) {
+        tbody.innerHTML = '';
+        zresetujPrzyciskiAukcji();
+        klienciDoWyswietlenia.forEach(k => {
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-id', k.id);
+            tr.innerHTML = `
+                <td><span class="id-badge">#${k.id}</span></td>
+                <td><span class="client-name">${k.imie || ''}</span></td>
+                <td><span class="client-name">${k.nazwisko || ''}</span></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.firma || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.nip || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.ulica || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.dom || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.lokal || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.miasto || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.kod || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.email || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.email2 || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.tel || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.tel2 || ''}</span></div></td>
+                <td><div class="cell-truncate"><span class="client-name">${k.opis || ''}</span></div></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    const polaWyszukiwania = { 'inp_nr_klienta': 'id', 'inp_nazwisko': 'nazwisko', 'inp_imie': 'imie', 'inp_firma': 'firma', 'inp_nip': 'nip', 'inp_email': 'email', 'inp_ulica': 'ulica', 'inp_nr_domu': 'dom', 'inp_email2': 'email2', 'inp_miasto': 'miasto', 'inp_nr_lokalu': 'lokal', 'inp_telefon': 'tel', 'inp_kod': 'kod', 'inp_telefon2': 'tel2' };
+
+    function filtrujKlientow() {
+        const przefiltrowani = wszyscyKlienci.filter(klient => {
+            for (const [inputId, klucz] of Object.entries(polaWyszukiwania)) {
+                const wpisanaWartosc = document.getElementById(inputId).value.toLowerCase().trim();
+                if (wpisanaWartosc !== '') {
+                    const wartoscKlienta = klient[klucz] ? String(klient[klucz]).toLowerCase() : '';
+                    if (!wartoscKlienta.startsWith(wpisanaWartosc)) return false;
+                }
+            } return true;
+        });
+        renderujTabele(przefiltrowani);
+    }
+
+    document.querySelectorAll('.form-fields input').forEach(input => input.addEventListener('input', filtrujKlientow));
+    
+    document.getElementById('btn_dodaj').addEventListener('click', () => { window.location.href = 'nowa_naprawa.html'; });
+
+    tbody.addEventListener('click', (event) => {
+        const kliknietyWiersz = event.target.closest('tr');
+        if (!kliknietyWiersz) return;
+        tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected'));
+        kliknietyWiersz.classList.add('selected');
+        wybranyKlientId = kliknietyWiersz.getAttribute('data-id');
+        btnWybierz.classList.remove('btn-disabled');
+        btnUsun.classList.remove('btn-disabled');
+    });
+
+    tbody.addEventListener('dblclick', (event) => {
+        const kliknietyWiersz = event.target.closest('tr');
+        if (!kliknietyWiersz) return;
+        tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected'));
+        kliknietyWiersz.classList.add('selected');
+        wybranyKlientId = kliknietyWiersz.getAttribute('data-id');
+        btnWybierz.classList.remove('btn-disabled');
+        btnUsun.classList.remove('btn-disabled');
+        btnWybierz.click();
+    });
+
+    // --- NOWE, WŁASNE OKIENKO HTML ZAMIAST ZBUGOWANEGO SYSTEMOWEGO CONFIRM ---
+    btnUsun.addEventListener('click', () => {
+        if (btnUsun.classList.contains('btn-disabled') || !wybranyKlientId) return;
+        
+        // Tworzymy przezroczyste tło blokujące klikanie pod spodem
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0'; overlay.style.left = '0';
+        overlay.style.width = '100vw'; overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.6)';
+        overlay.style.zIndex = '999999';
+        overlay.style.display = 'flex';
+        overlay.style.justifyContent = 'center';
+        overlay.style.alignItems = 'center';
+        
+        // Tworzymy białe okienko z pytaniem
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = '#fff';
+        modal.style.padding = '25px 30px';
+        modal.style.borderRadius = '8px';
+        modal.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+        modal.style.textAlign = 'center';
+        modal.style.maxWidth = '450px';
+        modal.style.fontFamily = "'Segoe UI', sans-serif";
+        
+        modal.innerHTML = `
+            <h3 style="margin-top:0; color:#d32f2f; font-size:20px;">⚠️ UWAGA!</h3>
+            <p style="font-size:15px; color:#222; margin-bottom:10px;">Czy na pewno chcesz usunąć klienta o ID <b>#${wybranyKlientId}</b>?</p>
+            <p style="font-size:13px; color:#666; margin-bottom:25px; line-height:1.5;">Po usunięciu klienta wszystkie jego sprzęty i naprawy zostaną <b>bezpowrotnie usunięte</b>. Tej operacji nie można cofnąć!</p>
+            <div style="display:flex; justify-content:center; gap:15px;">
+                <button id="modal-btn-tak" style="padding:10px 20px; background:#d32f2f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Tak, usuń</button>
+                <button id="modal-btn-nie" style="padding:10px 20px; background:#e0e0e0; color:#333; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Anuluj</button>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Akcja dla przycisku TAK
+        document.getElementById('modal-btn-tak').onclick = () => {
+            document.body.removeChild(overlay); // zamyka okienko
+            ipcRenderer.send('usun-klienta', wybranyKlientId); // wysyła prośbę do bazy
+        };
+        
+        // Akcja dla przycisku NIE (Anuluj)
+        document.getElementById('modal-btn-nie').onclick = () => {
+            document.body.removeChild(overlay); // zamyka okienko
+            window.location.href = 'klienci.html'; // przeładowuje stronę tak jak chciałeś
+        };
+        
+        // Proste efekty wizualne dla przycisków
+        document.getElementById('modal-btn-tak').onmouseover = function() { this.style.backgroundColor = '#b71c1c'; }
+        document.getElementById('modal-btn-tak').onmouseout = function() { this.style.backgroundColor = '#d32f2f'; }
+        document.getElementById('modal-btn-nie').onmouseover = function() { this.style.backgroundColor = '#d5d5d5'; }
+        document.getElementById('modal-btn-nie').onmouseout = function() { this.style.backgroundColor = '#e0e0e0'; }
+    });
+
+    // Kiedy baza potwierdzi usunięcie - odświeżamy moduł
+    ipcRenderer.on('klient-usuniety', () => {
+        window.location.href = 'klienci.html';
+    });
+
+    const viewList = document.getElementById('view-list'), viewDetails = document.getElementById('view-details');
+    const btnEdytuj = document.getElementById('btn_det_edytuj'), btnZapisz = document.getElementById('btn_det_zapisz'), btnAnuluj = document.getElementById('btn_det_anuluj');
+
+    function zaladujDaneDoFormularza(klient) {
+        document.getElementById('det_header_title').textContent = `${klient.nazwisko || ''}, ${klient.imie || ''} (ID: ${klient.id})`;
+        for (const [inputId, klucz] of Object.entries(detMap)) document.getElementById(inputId).value = klient[klucz] || '';
+    }
+
+    btnWybierz.addEventListener('click', () => {
+        if (btnWybierz.classList.contains('btn-disabled') || !wybranyKlientId) return;
+        const klient = wszyscyKlienci.find(k => k.id == wybranyKlientId);
+        if(!klient) return;
+        zaladujDaneDoFormularza(klient);
+        document.getElementById('btn_tab_dane').click();
+        viewList.style.display = 'none';
+        viewDetails.style.display = 'block';
+        anulujTrybEdycji();
+    });
+
+    // --- ZAKTUALIZOWANA LOGIKA PRZYCISKU WSTECZ ---
+    document.getElementById('btn_wstecz').addEventListener('click', () => {
+        if (new URLSearchParams(window.location.search).get('id')) {
+            window.history.back(); // Zmieniono z window.location.href = 'klienci.html';
+        } else {
+            viewDetails.style.display = 'none';
+            viewList.style.display = 'flex';
+            zresetujPrzyciskiAukcji();
+            tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected'));
+        }
+    });
+
+    // === ZARZĄDZANIE ZAKŁADKAMI WPROFILU KLIENTA ===
+    const tabDane = document.getElementById('tab_content_dane');
+    const tabNaprawy = document.getElementById('tab_content_naprawy');
+    const btnTabDane = document.getElementById('btn_tab_dane');
+    const btnTabNaprawy = document.getElementById('btn_tab_naprawy');
+
+    btnTabDane.addEventListener('click', () => {
+        tabDane.style.display = 'block';
+        tabNaprawy.style.display = 'none';
+        btnTabDane.classList.add('active');
+        btnTabNaprawy.classList.remove('active');
+    });
+
+    btnTabNaprawy.addEventListener('click', async () => {
+        tabDane.style.display = 'none';
+        tabNaprawy.style.display = 'block';
+        btnTabNaprawy.classList.add('active');
+        btnTabDane.classList.remove('active');
+        
+        if (!wybranyKlientId) return;
+        const klient = wszyscyKlienci.find(k => k.id == wybranyKlientId);
+        
+        const nazwaKlienta = `${klient.nazwisko || ''} ${klient.imie || ''}`.trim() || klient.firma || '';
+        document.getElementById('det_naprawy_szukaj_klient').value = `${nazwaKlienta} (ID: ${klient.id})`;
+        
+        await zaladujNaprawyKlienta(klient);
+    });
+
+    async function zaladujNaprawyKlienta(klient) {
+        const wszystkieNaprawy = await ipcRenderer.invoke('get-naprawy') || [];
+        const calySprzet = await ipcRenderer.invoke('get-sprzet').catch(() => []);
+        
+        aktualnyKlientNaprawy = wszystkieNaprawy.filter(n => n.id_klienta == klient.id);
+        
+        aktualnyKlientNaprawy.forEach(n => {
+            if (n.id_sprzetu && !n.sprzet) {
+                const s = calySprzet.find(item => item.id == n.id_sprzetu);
+                if (s) n.sprzet = s.nazwa || '';
+            }
+        });
+        
+        renderujTabeleNaprawKlienta();
+    }
+
+    // Dokładnie odwzorowana funkcja ładowania tak jak w głównych naprawach
+    function renderujTabeleNaprawKlienta() {
+        const detTbody = document.getElementById('detRepairsBody');
+        detTbody.innerHTML = '';
+        
+        const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+
+        aktualnyKlientNaprawy.forEach(n => {
+            let kolorDaty = '';
+            let dataU = n.ukonczenie || n.data_ukonczenia;
+            const status = (n.status || '').toLowerCase();
+            
+            if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                if (dataU) {
+                    let normalnaData = parseDateForSort(dataU);
+                    let termin = new Date(normalnaData);
+                    termin.setHours(0, 0, 0, 0);
+                    if (termin < dzisiaj) { kolorDaty = 'color: #d32f2f;'; }
+                }
+            }
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><span class="id-badge">#${n.id}</span></td>
+                <td><b>${formatujDateTabela(n.data_dodania || n.data_przyjecia)}</b></td>
+                <td><b style="${kolorDaty}">${formatujDateTabela(dataU)}</b></td>
+                <td><div class="cell-truncate"><b>${n.rodzaj || n.typ || ''}</b></div></td>
+                <td><b>${n.koszt_naprawy || n.koszt || ''}</b></td>
+                <td><b>${n.koszt_materialow || ''}</b></td>
+                <td><div class="cell-truncate"><b>${n.opis_uszkodzenia || ''}</b></div></td>
+                <td><div class="cell-truncate"><b>${n.opis_naprawy || ''}</b></div></td>
+                <td><div class="cell-truncate"><b>${n.komentarz || ''}</b></div></td>
+                <td><strong>${n.status || ''}</strong></td>
+                <td><div class="cell-truncate"><b>${n.sprzet || ''}</b></div></td>
+                <td><div class="cell-truncate"><b>${n.obslugujacy || ''}</b></div></td>
+            `;
+            tr.ondblclick = () => { window.location.href = `nowa_naprawa.html?id=${n.id}&krok=4`; };
+            tr.style.cursor = 'pointer';
+            detTbody.appendChild(tr);
+        });
+    }
+
+    // Przycisk dodawania nowej naprawy dla tego klienta - przekazuje parametr krok=2
+    document.getElementById('btn_dodaj_naprawe_klienta').onclick = () => {
+        if (wybranyKlientId) {
+            window.location.href = `nowa_naprawa.html?klient_id=${wybranyKlientId}&krok=2`;
+        }
+    };
+    
+    // === KONIEC ZARZĄDZANIA ZAKŁADKAMI ===
+
+    function wlaczTrybEdycji() {
+        Object.keys(detMap).forEach(id => document.getElementById(id).removeAttribute('readonly'));
+        oryginalneDaneKlienta = wszyscyKlienci.find(k => k.id == wybranyKlientId);
+        btnEdytuj.style.display = 'none';
+        btnZapisz.style.display = 'inline-block';
+        btnAnuluj.style.display = 'inline-block';
+    }
+    
+    function anulujTrybEdycji() {
+        Object.keys(detMap).forEach(id => document.getElementById(id).setAttribute('readonly', true));
+        btnEdytuj.style.display = 'inline-block';
+        btnZapisz.style.display = 'none';
+        btnAnuluj.style.display = 'none';
+    }
+    
+    btnEdytuj.addEventListener('click', wlaczTrybEdycji);
+    
+    btnAnuluj.addEventListener('click', () => {
+        zaladujDaneDoFormularza(oryginalneDaneKlienta);
+        anulujTrybEdycji();
+    });
+    
+    btnZapisz.addEventListener('click', () => {
+        const zaktualizowaneDane = { id: wybranyKlientId };
+        for (const [inputId, klucz] of Object.entries(detMap)) {
+            zaktualizowaneDane[klucz] = document.getElementById(inputId).value;
+        }
+        ipcRenderer.send('edytuj-klienta', zaktualizowaneDane);
+        anulujTrybEdycji();
+        document.getElementById('det_header_title').textContent = `${zaktualizowaneDane.nazwisko || ''}, ${zaktualizowaneDane.imie || ''} (ID: ${wybranyKlientId})`;
+    });
+
+    ipcRenderer.on('klient-edytowany', () => { window.location.href = 'klienci.html'; });
+    
+    window.onload = async () => {
+        await odswiezTabele();
+        const autoSelectId = new URLSearchParams(window.location.search).get('id');
+        if (autoSelectId) {
+            const row = document.querySelector(`tr[data-id="${autoSelectId}"]`);
+            if (row) {
+                row.click();
+                btnWybierz.click();
+            }
+        }
+    };
+</script>
+</body>
+</html>

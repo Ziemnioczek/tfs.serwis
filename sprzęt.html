@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>tfs.serwis</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f4f7f6; margin: 0; height: 100vh; overflow: hidden; } 
+        .main-wrapper { display: flex; height: 100vh; width: 100%; } 
+        .content-left { flex: 1; position: relative; height: 100vh; overflow: hidden; } 
+        .main-logo-container { position: absolute; top: 5px; left: 40px; z-index: 20; } 
+        .main-logo-container img { width: 200px; height: 100px; object-fit: contain; } 
+        
+        .stats-bar { position: absolute; top: 20px; left: 310px; right: 20px; display: flex; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; height: 60px; align-items: stretch; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; position: relative; flex-grow: 1; cursor: pointer; transition: background-color 0.2s; }
+        .stat-box:hover { background-color: #e4e4e4; }
+        .stat-box.active { background-color: #e4e4e4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-box::after { content: ""; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background-color: #bbb; }
+        .stat-box:last-child::after { display: none; }
+        .stat-label { font-size: 16px !important; color: #444; margin-bottom: 2px; }
+        .stat-number { font-size: 30px !important; font-weight: bold; color: #000; }
+        
+        #view-list { width: 100%; height: 100vh; padding: 110px 20px 30px 20px; box-sizing: border-box; display: flex; flex-direction: column; } 
+        .top-module-nav { display: flex; gap: 12px; margin-bottom: 12px; align-items: center; flex-shrink: 0; } 
+        .module-btn { width: 55px; height: 55px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); border: 1px solid #a9a9a9; border-radius: 6px; display: flex; justify-content: center; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.15); transition: all 0.2s; cursor: pointer; } 
+        .module-btn img { width: 32px; height: 32px; object-fit: contain; } 
+        .module-btn.active { background: #d0d0d0; box-shadow: inset 0 2px 6px rgba(0,0,0,0.3); border-color: #888; cursor: default; } 
+        
+        .table-container { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); overflow: auto; flex-grow: 1; max-height: 40vh; margin-bottom: 30px; border: 1px solid #ccc; } 
+        table { width: 100%; border-collapse: collapse; min-width: 1600px; } 
+        thead th { background-color: #34495e; color: white; padding: 12px 10px; text-align: center; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-right: 1px solid #455a64; position: sticky; top: 0; z-index: 10; } 
+        tbody tr { border-bottom: 1.5px solid #e0e0e0; transition: 0.1s; cursor: pointer; } 
+        tbody tr:hover { background-color: #f9f9f9; } 
+        tbody tr.selected { background-color: #d0e8f2 !important; } 
+        td { padding: 10px; font-size: 13px; color: #2c3e50; border-right: 1px solid #f0f0f0; text-align: center; vertical-align: middle; font-weight: bold; } 
+        td:last-child { border-right: none; } 
+        .id-badge { background: #f0f0f0; padding: 4px 6px; border-radius: 4px; font-weight: bold; font-size: 11px; color: #333; display: inline-block; } 
+        
+        .control-panel { background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; padding: 25px 20px; display: flex; gap: 20px; box-shadow: inset 0 1px 3px rgba(255,255,255,0.5); margin-top: auto; flex-shrink: 0; } 
+        .form-fields { flex-grow: 1; display: grid; grid-template-columns: max-content 1fr max-content 1fr max-content 1fr; gap: 10px 20px; align-items: center; } 
+        .form-fields label { font-size: 13px; color: #000; text-align: right; } 
+        .form-fields input { padding: 6px 8px; border: 1px solid #a9a9a9; border-radius: 2px; font-size: 13px; width: 100%; box-sizing: border-box; } 
+        .form-divider { grid-column: 1 / -1; border-bottom: 1px solid #ccc; margin: 10px 0; } 
+        
+        .form-buttons { display: flex; flex-direction: column; gap: 25px; min-width: 150px; justify-content: center; } 
+        .form-buttons button { padding: 10px 10px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); color: #000; transition: all 0.2s; font-weight: bold; } 
+        .btn-icon { font-size: 16px; transition: all 0.2s; } 
+        #btn_dodaj .btn-icon { color: #4CAF50; } 
+        #btn_wybierz .btn-icon { color: #2196F3; } 
+        #btn_usun .btn-icon { color: #F44336; } 
+        .btn-disabled { cursor: not-allowed !important; color: #777 !important; } 
+        .btn-disabled .btn-icon { filter: grayscale(100%) opacity(40%); } 
+        
+        .spec-frames-container { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 330px; } 
+        .spec-frame { border: 1px solid #bbb; border-radius: 2px; padding: 18px 10px 10px 10px; position: relative; background: #e9e9e9; } 
+        .spec-frame-title { position: absolute; top: -10px; left: 10px; background: #f4f7f6; padding: 0 5px; font-size: 12px; display: flex; align-items: center; gap: 5px; font-weight: bold; color: #000; z-index: 5; } 
+        .spec-frame-content { transition: all 0.3s; } 
+        .content-disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; } 
+        .spec-frame select, .spec-frame input[type="date"] { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 2px; font-size: 13px; background: white; } 
+        .spec-frame-row { display: flex; align-items: center; gap: 5px; } 
+        .spec-label-small { font-size: 11px; color: #444; } 
+        
+        #view-details { display: none; width: 100%; height: 100vh; padding: 15vh 40px 40px 40px; box-sizing: border-box; background-color: #f0f0f0; overflow-y: auto; } 
+        .det-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 20px; } 
+        .det-header-left { display: flex; align-items: center; gap: 15px; font-weight: bold; font-size: 16px; } 
+        .det-btn-back { background: linear-gradient(to bottom, #ffffff, #e0e0e0); border: 1px solid #a9a9a9; color: #333; border-radius: 4px; padding: 6px 15px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; font-weight: bold; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; gap: 8px; } 
+        .det-top-buttons, .det-sub-buttons { display: flex; gap: 10px; } 
+        .det-top-buttons button, .det-sub-buttons button { padding: 8px 15px; border: 1px solid #a9a9a9; border-radius: 4px; background: linear-gradient(to bottom, #ffffff, #e0e0e0); cursor: pointer; font-size: 13px; } 
+        .det-sub-row { display: flex; justify-content: flex-end; margin-bottom: 30px; } 
+        .det-title { font-weight: bold; margin-bottom: 15px; font-size: 14px; } 
+        .det-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; max-width: 1000px; } 
+        .det-group { display: grid; grid-template-columns: max-content 1fr; gap: 10px 15px; align-items: center; } 
+        .det-group label { text-align: right; font-size: 13px; } 
+        .det-group input, .det-group select, .det-opis-container textarea { padding: 6px; border: 1px solid #a9a9a9; border-radius: 2px; width: 100%; font-size: 13px; box-sizing: border-box; background-color: #f8f8f8; color: #333; } 
+        .det-group input:not(:disabled), .det-group select:not(:disabled), .det-opis-container textarea:not(:disabled) { background-color: #fffbdd; color: #000; } 
+        .det-opis-container { grid-column: 1 / -1; margin-top: 20px; display: grid; grid-template-columns: max-content 1fr; gap: 15px; } 
+        .det-opis-container label { font-size: 13px; text-align: right; } 
+        .det-opis-container textarea { height: 150px; resize: vertical; } 
+        
+        .sidebar-right { width: 240px; background-color: #f0f0f0; border-left: 1px solid #ccc; padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100vh; box-sizing: border-box; } 
+        .side-btn { background: #f8f8f8 !important; border: 1px solid #999; border-radius: 4px; cursor: pointer; display: flex; align-items: center; font-weight: bold; transition: all 0.2s ease; text-decoration: none; color: black; width: 100%; min-height: 80px; padding: 0 20px; font-size: 15px; justify-content: flex-start; } 
+        .side-btn img { width: 40px; height: 40px; object-fit: contain; margin-right: 25px; } 
+        .side-btn:hover { background: #ffffff !important; transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.1); } 
+        .sidebar-spacer { flex-grow: 1; }
+
+        /* --- STYLE DLA TOOLTIPA I UCINANIA TEKSTU --- */
+        .cell-truncate {
+            display: block;
+            max-width: 110px;
+            margin: 0 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: default;
+        }
+        #custom-tooltip {
+            position: fixed;
+            display: none;
+            background: #222;
+            color: #fff;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            z-index: 100000;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            pointer-events: none;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            border: 1px solid #555;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="content-left">
+        <div class="main-logo-container"><img src="img/logo-tfs.serwis.png" alt="Logo Serwisu"></div>
+
+        <div class="stats-bar">
+            <div class="stat-box" onclick="window.location.href='naprawy_w_trakcie.html'" title="Pokaż w trakcie">
+                <span class="stat-label">Naprawy w trakcie</span>
+                <span class="stat-number" id="stat_w_trakcie">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_wygasajace.html'" title="Pokaż wygasające">
+                <span class="stat-label">Naprawy wygasające</span>
+                <span class="stat-number" id="stat_wygasajace">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_po_terminie.html'" title="Pokaż po terminie">
+                <span class="stat-label">Naprawy po terminie</span>
+                <span class="stat-number" id="stat_po_terminie">0</span>
+            </div>
+        </div>
+
+        <div id="view-list">
+            <div class="top-module-nav">
+                <a href="naprawy.html" class="module-btn" title="Naprawy"><img src="img/ikonka-naprawy.png" alt="Naprawy"></a>
+                <a href="sprzęt.html" class="module-btn active" title="Sprzęt"><img src="img/ikonka-sprzęt.png" alt="Sprzęt"></a>
+                <a href="klienci.html" class="module-btn" title="Klienci"><img src="img/ikonka-klienci.png" alt="Klienci"></a>
+                <a href="rozliczenia.html" class="module-btn" title="Rozliczenia"><img src="img/ikonka-rozliczenia.png" alt="Rozliczenia"></a>
+            </div>
+
+            <div class="table-container">
+                <table id="hardwareTable">
+                    <thead><tr><th>ID</th><th>Właściciel</th><th>Nazwa</th><th>Typ sprzętu</th><th>Status</th><th>Data wydania</th><th>S/N</th><th>Stan</th><th>Bateria</th><th>Zasilacz</th><th>Gwarancja</th><th>Inne</th></tr></thead>
+                    <tbody id="hardwareBody"></tbody>
+                </table>
+            </div>
+
+            <div class="control-panel">
+                <div class="form-fields">
+                    <label>ID:</label> <input type="text" id="s_id" placeholder="#123">
+                    <label>Właściciel:</label> <input type="text" id="s_wlasciciel">
+                    <label>Nazwa:</label> <input type="text" id="s_nazwa">
+                    <label>Typ sprzętu:</label> <input type="text" id="s_typ">
+                    <span></span><span></span><span></span><span></span> <div class="form-divider"></div>
+                    <label>S/N:</label> <input type="text" id="s_sn">
+                    <label>Stan:</label> <input type="text" id="s_stan">
+                    <label>Bateria:</label> <input type="text" id="s_bateria">
+                    <label>Zasilacz:</label> <input type="text" id="s_zasilacz">
+                    <label>Gwarancja:</label> <input type="date" id="s_gwarancja">
+                    <label>Inne:</label> <input type="text" id="s_inne">
+                </div>
+
+                <div class="spec-frames-container" id="filter_frames">
+                    <div class="spec-frame">
+                        <div class="spec-frame-title"><input type="checkbox" id="cb_typ" onchange="toggleSpec('content_typ', this)"> Typ sprzętu</div>
+                        <div id="content_typ" class="spec-frame-content content-disabled"><select id="filter_typ" disabled onchange="filtrujSprzet()"><option>Laptop</option><option>PC</option><option>Telefon</option><option>Konsola</option><option>AGD</option><option>Inny</option></select></div>
+                    </div>
+                    <div class="spec-frame">
+                        <div class="spec-frame-title"><input type="checkbox" id="cb_gwar" onchange="toggleSpec('content_gwar', this)"> Gwarancja</div>
+                        <div id="content_gwar" class="spec-frame-content content-disabled"><div class="spec-frame-row"><span class="spec-label-small">Od:</span> <input type="date" id="filter_gwar_od" disabled onchange="filtrujSprzet()"><span class="spec-label-small">Do:</span> <input type="date" id="filter_gwar_do" disabled onchange="filtrujSprzet()"></div></div>
+                    </div>
+                    <div class="spec-frame">
+                        <div class="spec-frame-title"><input type="checkbox" id="cb_mag" onchange="toggleSpec('content_mag', this)"> Status</div>
+                        <div id="content_mag" class="spec-frame-content content-disabled"><select id="filter_mag" disabled onchange="filtrujSprzet()"><option>🟩 [W serwisie] W serwisie</option><option>🟥 [W serwisie] Do odbioru</option><option>🟧 [Poza serwisem] W serwisie zewnętrznym</option><option>🟪 [Poza serwisem] U klienta / usługa serwisowa</option><option>🟨 [Poza serwisem] Wysłany</option><option>⬜ [Sprzęt wydany] Poza ewidencją</option><option>🟦 [Sprzęt wydany] Odebrany</option></select></div>
+                    </div>
+                </div>
+
+                <div class="form-buttons">
+                    <button id="btn_dodaj"><span class="btn-icon">✚</span> Dodaj</button>
+                    <button id="btn_wybierz" class="btn-disabled"><span class="btn-icon">📄</span> Wybierz</button>
+                    <button id="btn_usun" class="btn-disabled"><span class="btn-icon">✖</span> Usuń</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-details">
+            <div class="det-header">
+                <div class="det-header-left"><button class="det-btn-back" id="btn_wstecz" title="Wróć do poprzedniego widoku"><span>⬅</span> Wstecz</button><span style="margin-left: 10px;">💻 Sprzęt: <span id="det_header_title">--</span></span></div>
+                </div>
+
+            <div class="det-sub-row"><div class="det-sub-buttons"><button id="btn_det_edytuj">✏️ Edytuj dane</button><button id="btn_det_zapisz" style="display: none;">💾 Zapisz</button><button id="btn_det_anuluj" style="display: none;">❌ Anuluj</button></div></div>
+            <div class="det-title">Dane sprzętu</div>
+            <div class="det-grid">
+                <div class="det-group"><label>Właściciel:</label> <input type="text" id="det_wlasciciel" disabled><label>Nazwa:</label> <input type="text" id="det_nazwa" disabled><label>S/N:</label> <input type="text" id="det_sn" disabled><label>Stan wizualny:</label> <input type="text" id="det_stan" disabled></div>
+                <div class="det-group"><label>Typ sprzętu:</label> <select id="det_typ" disabled><option>Laptop</option><option>PC</option><option>Telefon</option><option>Konsola</option><option>AGD</option><option>Inny</option></select><label>Status:</label> <select id="det_status" disabled><option>🟩 [W serwisie] W serwisie</option><option>🟥 [W serwisie] Do odbioru</option><option>🟧 [Poza serwisem] W serwisie zewnętrznym</option><option>🟪 [Poza serwisem] U klienta / usługa serwisowa</option><option>🟨 [Poza serwisem] Wysłany</option><option>⬜ [Sprzęt wydany] Poza ewidencją</option><option>🟦 [Sprzęt wydany] Odebrany</option></select><label>Bateria:</label> <input type="text" id="det_bateria" disabled><label>Zasilacz:</label> <input type="text" id="det_zasilacz" disabled></div>
+                <div class="det-group"><label>Gwarancja:</label> <input type="date" id="det_gwarancja" disabled></div>
+                <div class="det-opis-container"><label>Inne / Opis:</label><textarea id="det_inne" disabled></textarea></div>
+            </div>
+        </div>
+    </div> 
+
+    <div class="sidebar-right">
+        <a href="index.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-home.png"> <span>Home</span></button></a>
+        <a href="sprzęt.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-sprzęt.png"> <span>Sprzęt</span></button></a>
+        <a href="klienci.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-klienci.png"> <span>Klienci</span></button></a>
+        <a href="naprawy.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-naprawy.png"> <span>Naprawy</span></button></a>
+        <div class="sidebar-spacer"></div>
+        <a href="rozliczenia.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-rozliczenia.png"> <span>Rozliczenia</span></button></a>
+        <button class="side-btn"><img src="img/ikonka-statystyki.png"> <span>Statystyki</span></button>
+        <button class="side-btn"><img src="img/ikonka-konfiguracja.png"> <span>Konfiguracja</span></button>
+        <button class="side-btn"><img src="img/ikonka-wyloguj.png"> <span>Wyloguj</span></button>
+
+    </div>
+</div>
+
+<div id="custom-tooltip"></div>
+
+<script>
+    const { ipcRenderer } = require('electron');
+
+    const tbody = document.getElementById('hardwareBody');
+    let wybranySprzetId = null, calySprzet = [], oryginalneDaneSprzetu = null; 
+    const btnWybierz = document.getElementById('btn_wybierz'), btnUsun = document.getElementById('btn_usun');
+    const detMap = { 'det_wlasciciel': 'wlasciciel', 'det_nazwa': 'nazwa', 'det_typ': 'typ', 'det_status': 'status_magazyn', 'det_sn': 'sn', 'det_stan': 'stan', 'det_bateria': 'bateria', 'det_zasilacz': 'zasilacz', 'det_gwarancja': 'gwarancja', 'det_inne': 'inne' };
+
+    // --- LOGIKA TOOLTIPA ---
+    const tooltip = document.getElementById('custom-tooltip');
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target.closest('.cell-truncate');
+        if (target && target.scrollWidth > target.clientWidth) {
+            tooltip.textContent = target.textContent;
+            tooltip.style.display = 'block';
+        }
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (tooltip.style.display === 'block') {
+            let left = e.clientX + 15;
+            let top = e.clientY + 15;
+            if (left + tooltip.offsetWidth > window.innerWidth) left = e.clientX - tooltip.offsetWidth - 15;
+            if (top + tooltip.offsetHeight > window.innerHeight) top = e.clientY - tooltip.offsetHeight - 15;
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        }
+    });
+    document.addEventListener('mouseout', (e) => {
+        if (e.target.closest('.cell-truncate')) {
+            tooltip.style.display = 'none';
+        }
+    });
+    // -----------------------
+    
+    function parseDateForSort(dateStr) { 
+        if (!dateStr) return null; 
+        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; 
+        const parts = dateStr.split('-'); 
+        if (parts.length === 3) { 
+            if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; 
+            if (parts[0].length === 4) return dateStr; 
+        } 
+        return dateStr; 
+    }
+
+    async function zaladujStatystyki() {
+        try {
+            const pobrane = await ipcRenderer.invoke('get-naprawy') || [];
+            let wTrakcie = 0, poTerminie = 0, wygasajace = 0;
+            const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+            const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+            pobrane.forEach(n => {
+                const status = (n.status || '').toLowerCase();
+                if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                    let dataU = n.ukonczenie || n.data_ukonczenia;
+                    let isPoTerminie = false;
+
+                    if (dataU) {
+                        let normalnaData = parseDateForSort(dataU);
+                        if (normalnaData) {
+                            let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                            if (termin < dzisiaj) { poTerminie++; isPoTerminie = true; } 
+                            else if (termin >= dzisiaj && termin <= za4Dni) { wygasajace++; }
+                        }
+                    }
+
+                    if (!isPoTerminie) { wTrakcie++; }
+                }
+            });
+
+            document.getElementById('stat_w_trakcie').textContent = wTrakcie;
+            document.getElementById('stat_wygasajace').textContent = wygasajace;
+            document.getElementById('stat_po_terminie').textContent = poTerminie;
+        } catch(e) { console.error("Błąd ładowania statystyk:", e); }
+    }
+
+    function zresetujPrzyciskiAukcji() { 
+        wybranySprzetId = null; 
+        btnWybierz.classList.add('btn-disabled'); 
+        btnUsun.classList.add('btn-disabled'); 
+    }
+
+    function toggleSpec(contentId, checkbox) {
+        const content = document.getElementById(contentId), inputs = content.querySelectorAll('select, input');
+        if (checkbox.checked) { 
+            content.classList.remove('content-disabled'); 
+            inputs.forEach(i => i.disabled = false); 
+        } else { 
+            content.classList.add('content-disabled'); 
+            inputs.forEach(i => i.disabled = true); 
+        }
+        filtrujSprzet(); 
+    }
+
+    async function odswiezTabele() {
+        try { 
+            await zaladujStatystyki(); 
+            calySprzet = await ipcRenderer.invoke('get-sprzet'); 
+            renderujTabele(calySprzet); 
+        } catch (error) { console.error("Błąd ładowania sprzętu:", error); }
+    }
+
+    function renderujTabele(lista) {
+        tbody.innerHTML = ''; 
+        zresetujPrzyciskiAukcji(); 
+        lista.forEach(s => {
+            const tr = document.createElement('tr'); 
+            tr.setAttribute('data-id', s.id); 
+            let wlascicielDisplay = (s.wlasciciel || '').replace(/^#\d+\s+/, '');
+            
+            tr.innerHTML = `
+                <td><span class="id-badge">#${s.id}</span></td>
+                <td><div class="cell-truncate">${wlascicielDisplay}</div></td>
+                <td><div class="cell-truncate">${s.nazwa || ''}</div></td>
+                <td><div class="cell-truncate">${s.typ || ''}</div></td>
+                <td>${s.status_magazyn || ''}</td>
+                <td>${s.data_wydania || ''}</td>
+                <td><div class="cell-truncate">${s.sn || ''}</div></td>
+                <td><div class="cell-truncate">${s.stan || ''}</div></td>
+                <td><div class="cell-truncate">${s.bateria || ''}</div></td>
+                <td><div class="cell-truncate">${s.zasilacz || ''}</div></td>
+                <td><div class="cell-truncate">${s.gwarancja || ''}</div></td>
+                <td><div class="cell-truncate">${s.inne || ''}</div></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    const polaWyszukiwania = { 's_id': 'id', 's_wlasciciel': 'wlasciciel', 's_nazwa': 'nazwa', 's_typ': 'typ', 's_sn': 'sn', 's_stan': 'stan', 's_bateria': 'bateria', 's_zasilacz': 'zasilacz', 's_gwarancja': 'gwarancja', 's_inne': 'inne' };
+
+    function filtrujSprzet() {
+        const przefiltrowani = calySprzet.filter(sprzet => {
+            for (const [inputId, klucz] of Object.entries(polaWyszukiwania)) {
+                const el = document.getElementById(inputId); 
+                if (!el) continue;
+                const wpisanaWartosc = el.value.toLowerCase().trim();
+                if (wpisanaWartosc !== '') {
+                    let wartoscSprzetu = sprzet[klucz] ? String(sprzet[klucz]).toLowerCase() : '';
+                    if (klucz === 'wlasciciel') wartoscSprzetu = wartoscSprzetu.replace(/^#\d+\s+/, '');
+                    if (!wartoscSprzetu.startsWith(wpisanaWartosc)) return false; 
+                }
+            }
+            const cbTyp = document.getElementById('cb_typ'); 
+            if (cbTyp && cbTyp.checked) { if ((sprzet.typ ? String(sprzet.typ).toLowerCase() : '') !== document.getElementById('filter_typ').value.toLowerCase()) return false; }
+            
+            const cbMag = document.getElementById('cb_mag'); 
+            if (cbMag && cbMag.checked) { if ((sprzet.status_magazyn ? String(sprzet.status_magazyn).toLowerCase() : '') !== document.getElementById('filter_mag').value.toLowerCase()) return false; }
+            
+            const cbGwar = document.getElementById('cb_gwar'); 
+            if (cbGwar && cbGwar.checked) {
+                const fOd = document.getElementById('filter_gwar_od').value, fDo = document.getElementById('filter_gwar_do').value;
+                let sOd = '', sDo = '';
+                const mOd = sprzet.gwarancja ? String(sprzet.gwarancja).match(/Od:\s*(\d{4}-\d{2}-\d{2})/) : null, mDo = sprzet.gwarancja ? String(sprzet.gwarancja).match(/Do:\s*(\d{4}-\d{2}-\d{2})/) : null;
+                if (mOd) sOd = mOd[1]; 
+                if (mDo) sDo = mDo[1];
+                if (fOd && (!sOd || sOd < fOd)) return false; 
+                if (fDo && (!sDo || sDo > fDo)) return false;
+            } 
+            return true; 
+        }); 
+        renderujTabele(przefiltrowani);
+    }
+
+    document.querySelectorAll('.form-fields input').forEach(input => input.addEventListener('input', filtrujSprzet));
+    document.getElementById('btn_dodaj').addEventListener('click', () => { window.location.href = 'nowa_naprawa.html'; });
+
+    tbody.addEventListener('click', (event) => {
+        const kliknietyWiersz = event.target.closest('tr'); 
+        if (!kliknietyWiersz) return;
+        tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected')); 
+        kliknietyWiersz.classList.add('selected');
+        wybranySprzetId = kliknietyWiersz.getAttribute('data-id'); 
+        btnWybierz.classList.remove('btn-disabled'); 
+        btnUsun.classList.remove('btn-disabled');
+    });
+
+    tbody.addEventListener('dblclick', (event) => {
+        const kliknietyWiersz = event.target.closest('tr'); 
+        if (!kliknietyWiersz) return;
+        tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected')); 
+        kliknietyWiersz.classList.add('selected');
+        wybranySprzetId = kliknietyWiersz.getAttribute('data-id'); 
+        btnWybierz.classList.remove('btn-disabled'); 
+        btnUsun.classList.remove('btn-disabled'); 
+        btnWybierz.click(); 
+    });
+
+    btnUsun.addEventListener('click', () => {
+        if (btnUsun.classList.contains('btn-disabled') || !wybranySprzetId) return;
+        
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0'; overlay.style.left = '0';
+        overlay.style.width = '100vw'; overlay.style.height = '100vh';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.6)';
+        overlay.style.zIndex = '999999';
+        overlay.style.display = 'flex'; 
+        overlay.style.justifyContent = 'center'; 
+        overlay.style.alignItems = 'center';
+        
+        const modal = document.createElement('div');
+        modal.style.backgroundColor = '#fff';
+        modal.style.padding = '25px 30px';
+        modal.style.borderRadius = '8px';
+        modal.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+        modal.style.textAlign = 'center';
+        modal.style.maxWidth = '450px';
+        modal.style.fontFamily = "'Segoe UI', sans-serif";
+        
+        modal.innerHTML = `
+            <h3 style="margin-top:0; color:#d32f2f; font-size:20px;">⚠️ UWAGA!</h3>
+            <p style="font-size:15px; color:#222; margin-bottom:10px;">Czy na pewno chcesz usunąć sprzęt o ID <b>#${wybranySprzetId}</b>?</p>
+            <p style="font-size:13px; color:#666; margin-bottom:25px; line-height:1.5;">Tej operacji nie można cofnąć!</p>
+            <div style="display:flex; justify-content:center; gap:15px;">
+                <button id="modal-btn-tak" style="padding:10px 20px; background:#d32f2f; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Tak, usuń</button>
+                <button id="modal-btn-nie" style="padding:10px 20px; background:#e0e0e0; color:#333; border:none; border-radius:4px; cursor:pointer; font-weight:bold; font-size:14px; transition:0.2s;">Anuluj</button>
+            </div>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        document.getElementById('modal-btn-tak').onclick = () => {
+            document.body.removeChild(overlay);
+            ipcRenderer.send('usun-sprzet', wybranySprzetId);
+        };
+        
+        document.getElementById('modal-btn-nie').onclick = () => {
+            document.body.removeChild(overlay);
+        };
+        
+        document.getElementById('modal-btn-tak').onmouseover = function() { this.style.backgroundColor = '#b71c1c'; }
+        document.getElementById('modal-btn-tak').onmouseout = function() { this.style.backgroundColor = '#d32f2f'; }
+        document.getElementById('modal-btn-nie').onmouseover = function() { this.style.backgroundColor = '#d5d5d5'; }
+        document.getElementById('modal-btn-nie').onmouseout = function() { this.style.backgroundColor = '#e0e0e0'; }
+    });
+
+    ipcRenderer.on('sprzet-usuniety', () => { 
+        document.querySelectorAll('.form-fields input').forEach(inp => inp.value = ''); 
+        odswiezTabele(); 
+    });
+
+    const viewList = document.getElementById('view-list'), viewDetails = document.getElementById('view-details');
+    const btnEdytuj = document.getElementById('btn_det_edytuj'), btnZapisz = document.getElementById('btn_det_zapisz'), btnAnuluj = document.getElementById('btn_det_anuluj');
+
+    function zaladujDaneDoFormularza(sprzet) {
+        document.getElementById('det_header_title').textContent = `${sprzet.nazwa || 'Brak nazwy'} (ID: ${sprzet.id})`;
+        for (const [inputId, klucz] of Object.entries(detMap)) {
+            let wartosc = sprzet[klucz] || '';
+            
+            // Logika bezpieczeństwa dla daty gwarancji - wyciągamy prawidłowy format YYYY-MM-DD
+            if (inputId === 'det_gwarancja' && wartosc) {
+                const matches = String(wartosc).match(/\d{4}-\d{2}-\d{2}/g);
+                if (matches) wartosc = matches[matches.length - 1]; // Jeśli jest ciąg "Od: data Do: data", bierzemy końcową
+            }
+            
+            document.getElementById(inputId).value = wartosc;
+        }
+    }
+
+    btnWybierz.addEventListener('click', () => {
+        if (btnWybierz.classList.contains('btn-disabled') || !wybranySprzetId) return;
+        const sprzet = calySprzet.find(s => s.id == wybranySprzetId); 
+        if(!sprzet) return;
+        zaladujDaneDoFormularza(sprzet); 
+        viewList.style.display = 'none'; 
+        viewDetails.style.display = 'block'; 
+        anulujTrybEdycji(); 
+    });
+
+    document.getElementById('btn_wstecz').addEventListener('click', () => {
+        if (new URLSearchParams(window.location.search).get('id')) {
+            window.history.back();
+        } else { 
+            viewDetails.style.display = 'none'; 
+            viewList.style.display = 'flex'; 
+            zresetujPrzyciskiAukcji(); 
+            tbody.querySelectorAll('tr').forEach(tr => tr.classList.remove('selected')); 
+        }
+    });
+    
+    function wlaczTrybEdycji() { 
+        Object.keys(detMap).forEach(id => document.getElementById(id).removeAttribute('disabled')); 
+        oryginalneDaneSprzetu = calySprzet.find(s => s.id == wybranySprzetId); 
+        btnEdytuj.style.display = 'none'; 
+        btnZapisz.style.display = 'inline-block'; 
+        btnAnuluj.style.display = 'inline-block'; 
+    }
+    function anulujTrybEdycji() { 
+        Object.keys(detMap).forEach(id => document.getElementById(id).setAttribute('disabled', true)); 
+        btnEdytuj.style.display = 'inline-block'; 
+        btnZapisz.style.display = 'none'; 
+        btnAnuluj.style.display = 'none'; 
+    }
+
+    btnEdytuj.addEventListener('click', wlaczTrybEdycji);
+    btnAnuluj.addEventListener('click', () => { zaladujDaneDoFormularza(oryginalneDaneSprzetu); anulujTrybEdycji(); });
+    
+    btnZapisz.addEventListener('click', () => {
+        const zaktualizowaneDane = { id: wybranySprzetId };
+        for (const [inputId, klucz] of Object.entries(detMap)) {
+            zaktualizowaneDane[klucz] = document.getElementById(inputId).value;
+        }
+        ipcRenderer.send('edytuj-sprzet', zaktualizowaneDane); 
+        anulujTrybEdycji(); 
+        document.getElementById('det_header_title').textContent = `${zaktualizowaneDane.nazwa || 'Brak nazwy'} (ID: ${wybranySprzetId})`;
+    });
+
+    ipcRenderer.on('sprzet-edytowany', () => { odswiezTabele(); });
+
+    window.onload = async () => { 
+        await odswiezTabele(); 
+        const autoSelectId = new URLSearchParams(window.location.search).get('id'); 
+        if (autoSelectId) { 
+            const row = document.querySelector(`tr[data-id="${autoSelectId}"]`); 
+            if (row) { 
+                row.click(); 
+                btnWybierz.click(); 
+            } 
+        } 
+    };
+</script>
+</body>
+</html>

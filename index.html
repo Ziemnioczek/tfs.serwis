@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>tfs.serwis</title>
+    <style>
+        body { background-color: #f4f7f6; margin: 0; height: 100vh; font-family: 'Segoe UI', sans-serif; overflow: hidden; } 
+        .main-wrapper { display: flex; height: 100vh; width: 100%; } 
+        .content-left { flex: 1; position: relative; padding: 20px; box-sizing: border-box; } 
+        .main-logo-container { position: absolute; top: 5px; left: 40px; z-index: 20; } 
+        .main-logo-container img { width: 200px; height: 100px; object-fit: contain; } 
+        
+        /* SKOPIOWANE Z NAPRAWY.HTML */
+        .stats-bar { position: absolute; top: 20px; left: 310px; right: 20px; display: flex; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; height: 60px; align-items: stretch; z-index: 20; box-shadow: 0 2px 5px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .stat-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; position: relative; flex-grow: 1; cursor: pointer; transition: background-color 0.2s; }
+        .stat-box:hover { background-color: #e4e4e4; }
+        .stat-box.active { background-color: #e4e4e4; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .stat-box::after { content: ""; position: absolute; right: 0; top: 20%; height: 60%; width: 1px; background-color: #bbb; }
+        .stat-box:last-child::after { display: none; }
+        .stat-label { font-size: 16px !important; color: #444; margin-bottom: 2px; }
+        .stat-number { font-size: 30px !important; font-weight: bold; color: #000; }
+        
+        .big-menu-btn { width: 580px; transform: scale(0.6); position: absolute; z-index: 10; background-color: #f4f7f6; color: rgb(0, 0, 0); padding: 5px 10px; border: 3px solid #000000; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: bold; display: flex; align-items: center; gap: 15px; transform-origin: left center; } 
+        .big-menu-btn:hover { background-color: #ffffff; transform: scale(0.625); } 
+        .button-text-container { display: flex; flex-direction: column; align-items: flex-start; padding: 10px 30px; font-size: 44px; } 
+        .button-icon { width: 200px; height: auto; } 
+        #myButton-1 { top: 150px; left: 60px; } 
+        #myButton-2 { top: 340px; left: 60px; } 
+        #myButton-3 { top: 530px; left: 60px; } 
+        #myButton-4 { top: 150px; left: 470px; } 
+        #myButton-5 { top: 340px; left: 470px; } 
+        #myButton-6 { top: 530px; left: 470px; } 
+        
+        .sidebar-right { width: 240px; background-color: #f0f0f0; border-left: 1px solid #ccc; padding: 12px; display: flex; flex-direction: column; gap: 10px; height: 100vh; box-sizing: border-box; } 
+        .side-btn { background: #f8f8f8 !important; border: 1px solid #999; border-radius: 4px; cursor: pointer; display: flex; align-items: center; font-weight: bold; transition: all 0.2s ease; text-decoration: none; color: black; width: 100%; min-height: 80px; padding: 0 20px; font-size: 15px; justify-content: flex-start; box-sizing: border-box; } 
+        .side-btn img { width: 40px; height: 40px; object-fit: contain; margin-right: 25px; } 
+        .side-btn:hover { background: #ffffff !important; transform: scale(1.02); box-shadow: 0 4px 10px rgba(0,0,0,0.1); } 
+        .sidebar-spacer { flex-grow: 1; }
+    </style>
+</head>
+<body>
+
+<div class="main-wrapper">
+    <div class="content-left">
+        <div class="main-logo-container"><img src="img/logo-tfs.serwis.png" alt="Logo Serwisu"></div>
+
+        <!-- SKOPIOWANE Z NAPRAWY.HTML -->
+        <div class="stats-bar">
+            <!-- Ten ekran "wszystkie naprawy" nie podświetla teraz kafelka "w trakcie" -->
+            <div class="stat-box" onclick="window.location.href='naprawy_w_trakcie.html'" title="Pokaż w trakcie">
+                <span class="stat-label">Naprawy w trakcie</span>
+                <span class="stat-number" id="stat_w_trakcie">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_wygasajace.html'" title="Pokaż wygasające">
+                <span class="stat-label">Naprawy wygasające</span>
+                <span class="stat-number" id="stat_wygasajace">0</span>
+            </div>
+            <div class="stat-box" onclick="window.location.href='naprawy_po_terminie.html'" title="Pokaż po terminie">
+                <span class="stat-label">Naprawy po terminie</span>
+                <span class="stat-number" id="stat_po_terminie">0</span>
+            </div>
+        </div>
+
+        <a href="nowa_naprawa.html"><button id="myButton-1" class="big-menu-btn"><img src="img/ikonka-nowa_naprawa.png" class="button-icon"><div class="button-text-container"><strong>Nowa</strong><strong>naprawa</strong></div></button></a>
+        <a href="ostatnie_naprawy.html"><button id="myButton-2" class="big-menu-btn"><img src="img/ikonka-ostatnie_naprawy.png" class="button-icon"><div class="button-text-container"><strong>Ostatnie</strong><strong>naprawy</strong></div></button></a>
+        <a href="naprawy.html"><button id="myButton-3" class="big-menu-btn"><img src="img/ikonka-szukaj_naprawy.png" class="button-icon"><div class="button-text-container"><strong>Szukaj</strong><strong>naprawy</strong></div></button></a>
+        <a href="naprawy_wygasajace.html"><button id="myButton-4" class="big-menu-btn"><img src="img/ikonka-naprawy_wygasające.png" class="button-icon"><div class="button-text-container"><strong>Naprawy</strong><strong>wygasające</strong></div></button></a>
+        <a href="naprawy_po_terminie.html"><button id="myButton-5" class="big-menu-btn"><img src="img/ikonka-naprawy_po_terminie.png" class="button-icon"><div class="button-text-container"><strong>Naprawy</strong><strong>po terminie</strong></div></button></a>
+        <a href="naprawy_w_trakcie.html"><button id="myButton-6" class="big-menu-btn"><img src="img/ikonka-naprawy_w_trakcie.png" class="button-icon"><div class="button-text-container"><strong>Naprawy</strong><strong>w trakcie</strong></div></button></a>
+    </div>
+
+    <div class="sidebar-right">
+        <a href="index.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-home.png"> <span>Home</span></button></a>
+        <a href="sprzęt.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-sprzęt.png"> <span>Sprzęt</span></button></a>
+        <a href="klienci.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-klienci.png"> <span>Klienci</span></button></a>
+        <a href="naprawy.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-naprawy.png"> <span>Naprawy</span></button></a>
+        <div class="sidebar-spacer"></div>
+        <a href="rozliczenia.html" style="text-decoration: none;"><button class="side-btn"><img src="img/ikonka-rozliczenia.png"> <span>Rozliczenia</span></button></a>
+        <button class="side-btn"><img src="img/ikonka-statystyki.png"> <span>Statystyki</span></button>
+        <button class="side-btn"><img src="img/ikonka-konfiguracja.png"> <span>Konfiguracja</span></button>
+        <button class="side-btn"><img src="img/ikonka-wyloguj.png"> <span>Wyloguj</span></button>
+    </div>
+</div>
+
+<script>
+    const { ipcRenderer } = require('electron');
+
+    function parseDateForSort(dateStr) { 
+        if (!dateStr) return null; 
+        if (dateStr.includes('T')) dateStr = dateStr.split('T')[0]; 
+        const parts = dateStr.split('-'); 
+        if (parts.length === 3) { 
+            if (parts[2].length === 4) return `${parts[2]}-${parts[1]}-${parts[0]}`; 
+            if (parts[0].length === 4) return dateStr; 
+        } 
+        return dateStr; 
+    }
+
+    // LOKIGA SKOPIOWANA DOKŁADNIE Z TWOJEGO NAPRAWY.HTML
+    async function zaladujStatystyki() {
+        try {
+            const pobrane = await ipcRenderer.invoke('get-naprawy') || [];
+            let wTrakcie = 0, poTerminie = 0, wygasajace = 0;
+            const dzisiaj = new Date(); dzisiaj.setHours(0, 0, 0, 0);
+            const za4Dni = new Date(dzisiaj); za4Dni.setDate(dzisiaj.getDate() + 4); za4Dni.setHours(23, 59, 59, 999);
+
+            pobrane.forEach(n => {
+                const status = (n.status || '').toLowerCase();
+                if (!status.includes('[zamknięta]') && !status.includes('ukończona') && !status.includes('odebrany') && !status.includes('niewykonana')) {
+                    let dataU = n.ukonczenie || n.data_ukonczenia;
+                    let isPoTerminie = false;
+
+                    if (dataU) {
+                        let normalnaData = parseDateForSort(dataU);
+                        if (normalnaData) { // Dodane tylko zabezpieczenie przed errorem
+                            let termin = new Date(normalnaData); termin.setHours(0, 0, 0, 0);
+                            if (termin < dzisiaj) { poTerminie++; isPoTerminie = true; } 
+                            else if (termin >= dzisiaj && termin <= za4Dni) { wygasajace++; }
+                        }
+                    }
+
+                    if (!isPoTerminie) { wTrakcie++; }
+                }
+            });
+
+            document.getElementById('stat_w_trakcie').textContent = wTrakcie;
+            document.getElementById('stat_wygasajace').textContent = wygasajace;
+            document.getElementById('stat_po_terminie').textContent = poTerminie;
+        } catch(e) { console.error("Błąd ładowania statystyk:", e); }
+    }
+
+    window.onload = () => { zaladujStatystyki(); };
+</script>
+</body>
+</html>
